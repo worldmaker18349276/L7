@@ -342,6 +342,7 @@ customElements.define("l7-box", class extends HTMLElement {
   }
   disconnectedCallback() {
     this._observer.disconnect();
+    this._resize_handler.unregister();
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
@@ -597,10 +598,21 @@ customElements.define("l7-port", class extends HTMLElement {
   static get observedAttributes() {
     return ["offset"];
   }
+  connectedCallback() {
+    this._move_handler = new DragHandler({}, ".handle",
+      this.onmovestart.bind(this),
+      this.onmove.bind(this),
+      this.onmoveend.bind(this)
+    );
+    this._move_handler.register(this.shadowRoot);
+  }
+  disconnectedCallback() {
+    this._move_handler.unregister();
+  }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "offset" ) {
-        this.style.setProperty("--offset", this.offset);
+        this.style.setProperty("--offset", `calc(clamp(0%, ${this.offset}, 100%))`);
       }
     }
   }
@@ -609,7 +621,34 @@ customElements.define("l7-port", class extends HTMLElement {
     return this.getAttribute("offset");
   }
   set offset(offset) {
-    this.setAttribute(offset);
+    this.setAttribute("offset", offset);
+  }
+
+  onmovestart(event) {
+    this.closest(".root").classList.add("moving");
+
+    let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
+    parentWidth = parseFloat(parentWidth);
+    parentHeight = parseFloat(parentHeight);
+    this._parentWidth = parentWidth;
+    this._parentHeight = parentHeight;
+
+    let offset_shifter = makeShifter(this.offset, "%");
+
+    if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
+      this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftX);
+    if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
+      this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftY);
+
+    return true;
+  }
+  onmove(event) {
+    let shiftX = 100*event.deltaX/this._parentWidth;
+    let shiftY = 100*event.deltaY/this._parentHeight;
+    this.offset = this._offset_shifter(shiftX, shiftY);
+  }
+  onmoveend(event) {
+    this.closest(".root").classList.remove("moving");
   }
 });
 
