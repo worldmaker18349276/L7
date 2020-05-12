@@ -1,0 +1,22 @@
+.root {
+  position: absolute;
+  left: 5vw;
+  top: 5vh;
+  width: 90vw;
+  height: 90vh;
+  overflow: scroll;
+  border: solid;
+  resize: both;
+  background: pink;
+
+  --scale: 2;
+  --lineRadius      : calc(var(--scale) * 1px);
+  --dotRadius       : calc(var(--scale) * 2px);
+  --shadowRadius    : calc(var(--scale) * 1px);
+  --hoverRadius     : calc(var(--scale) * 3px);
+  --shadowColor     : white;
+  --strokeColor     : DimGray;
+  --hoverColor      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */
+  --focusColor      : DarkGray;
+  --bgColor         : rgba(245, 245, 245, 0.8); /* WhiteSmoke */
+}
