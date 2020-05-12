@@ -1,10 +1,5 @@
 "use strict";
 
-function matches(target, selector, host=target) {
-  return target.matches(selector)
-         || target === host && selector.test(/(^|,)\s*:scope\s*(,|$)/)
-         || Array.from(host.querySelectorAll(selector)).includes(target);
-}
 function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
@@ -13,7 +8,7 @@ class DragHandler
 {
   constructor(modifiers, selector, ondragstart, ondrag, ondragend) {
     this.dragging = false;
-    this.modifiers = modifiers; // bitwise: alt, shift, ctrl, meta
+    this.modifiers = modifiersOf(modifiers); // bitwise: alt, shift, ctrl, meta
     this.selector = selector;
 
     this.ondragstart = ondragstart;
@@ -35,10 +30,13 @@ class DragHandler
   }
 
   _onmousedown(event) {
-    if ( this.button === 1
+    if ( event.buttons === 1
          && this.modifiers === modifiersOf(event)
-         && !this.dragging
-         && matches(evenet.target, this.selector, this.host) ) {
+         && event.target.matches(this.selector) ) {
+      event.stopPropagation();
+     if ( this.dragging )
+        return;
+
       // drag state
       this._originalTarget = event.target;
       this._startOffsetX = event.offsetX;
@@ -53,7 +51,7 @@ class DragHandler
     }
   }
   _onmouseup(event) {
-    if ( (event.button & 1) !== 1 )
+    if ( (event.buttons & 1) !== 1 )
       this.release();
   }
   _onkeyup(event) {
@@ -121,6 +119,25 @@ class DragHandler
     document.removeEventListener("mouseup", this._onmouseup, false);
     document.removeEventListener("keyup", this._onkeyup, false);
   }
+}
+
+function makeShifter(expr, unit="px") {
+  let shift = String.raw`(-?\d+(?:.\d+)?)${unit}`;
+  let shifted = String.raw`(.+) \+ ${shift}`;
+  let shift_regex = new RegExp("^" + shift + "$");
+  let shifted_regex = new RegExp("^" + shifted + "$");
+
+  let res;
+  if ( res = shift_regex.exec(expr) ) {
+    let shift_value = parseFloat(res[1]);
+    return value => `${shift_value+value}${unit}`;
+  }
+  if ( res = shifted_regex.exec(expr) ) {
+    let origin_value = res[1];
+    let shift_value = parseFloat(res[2]);
+    return value => `${origin_value} + ${shift_value+value}${unit}`;
+  }
+  return value => `${expr} + ${value}${unit}`;
 }
 
 
@@ -284,7 +301,7 @@ template_box.innerHTML = `
 }
 </style>
 
-<div class="handle interior"></div>
+<div class="handle interior top left right bottom"></div>
 <div class="handle corner top left"></div>
 <div class="handle corner top right"></div>
 <div class="handle corner bottom left"></div>
@@ -315,6 +332,13 @@ customElements.define("l7-box", class extends HTMLElement {
           border.style.setProperty("--i", i);
     });
     this._observer.observe(this, {childList: true});
+
+    this._resize_handler = new DragHandler({}, ".handle",
+      this.onresizestart.bind(this),
+      this.onresize.bind(this),
+      this.onresizeend.bind(this)
+    );
+    this._resize_handler.register(this.shadowRoot);
   }
   disconnectedCallback() {
     this._observer.disconnect();
@@ -323,10 +347,10 @@ customElements.define("l7-box", class extends HTMLElement {
     if ( old !== value ) {
       if ( name === "rect" ) {
         let {left, top, width, height} = this.rect;
-        this.style.setProperty("--left"  , left);
-        this.style.setProperty("--top"   , top);
-        this.style.setProperty("--width" , width);
-        this.style.setProperty("--height", height);
+        this.style.setProperty("--left"  , `calc(${left})`);
+        this.style.setProperty("--top"   , `calc(${top})`);
+        this.style.setProperty("--width" , `calc(${width})`);
+        this.style.setProperty("--height", `calc(${height})`);
       }
     }
   }
@@ -336,7 +360,57 @@ customElements.define("l7-box", class extends HTMLElement {
     return {left, top, width, height};
   }
   set rect({left, top, width, height}) {
-    this.setAttribute([left, top, width, height].join(";"));
+    this.setAttribute("rect", [left, top, width, height].join(";"));
+  }
+
+  onresizestart(event) {
+    this.closest(".root").classList.add("moving");
+
+    let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
+    parentWidth = parseFloat(parentWidth);
+    parentHeight = parseFloat(parentHeight);
+    this._parentWidth = parentWidth;
+    this._parentHeight = parentHeight;
+
+    let {left, top, width, height} = this.rect;
+    let left_shifter = makeShifter(left, "%");
+    let width_shifter = makeShifter(width, "%");
+    let top_shifter = makeShifter(top, "%");
+    let height_shifter = makeShifter(height, "%");
+
+    this._rect_shifter = {
+      left: ()=>left,
+      top: ()=>top,
+      width: ()=>width,
+      height: ()=>height,
+    };
+    if ( event.originalTarget.matches(".left") )
+      this._rect_shifter.left = left_shifter;
+    if ( event.originalTarget.matches(".right:not(.left)") )
+      this._rect_shifter.width = width_shifter;
+    if ( event.originalTarget.matches(".left:not(.right)") )
+      this._rect_shifter.width = value => width_shifter(-value);
+    if ( event.originalTarget.matches(".top") )
+      this._rect_shifter.top = top_shifter;
+    if ( event.originalTarget.matches(".bottom:not(.top)") )
+      this._rect_shifter.height = height_shifter;
+    if ( event.originalTarget.matches(".top:not(.bottom)") )
+      this._rect_shifter.height = value => height_shifter(-value);
+
+    return true;
+  }
+  onresize(event) {
+    let shiftX = 100*event.deltaX/this._parentWidth;
+    let shiftY = 100*event.deltaY/this._parentHeight;
+
+    let left = this._rect_shifter.left(shiftX);
+    let width = this._rect_shifter.width(shiftX);
+    let top = this._rect_shifter.top(shiftY);
+    let height = this._rect_shifter.height(shiftY);
+    this.rect = {left, top, width, height};
+  }
+  onresizeend(event) {
+    this.closest(".root").classList.remove("moving");
   }
 });
 
