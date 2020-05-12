@@ -4,123 +4,6 @@ function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
 
-class DragHandler
-{
-  constructor(modifiers, selector, ondragstart, ondrag, ondragend) {
-    this.dragging = false;
-    this.modifiers = modifiersOf(modifiers); // bitwise: alt, shift, ctrl, meta
-    this.selector = selector;
-
-    this.ondragstart = ondragstart;
-    this.ondrag = ondrag;
-    this.ondragend = ondragend;
-
-    this._onmousedown = this._onmousedown.bind(this);
-    this._onmouseup = this._onmouseup.bind(this);
-    this._onkeyup = this._onkeyup.bind(this);
-    this._onmousemove = this._onmousemove.bind(this);
-  }
-  register(host) {
-    this.host = host;
-    host.addEventListener("mousedown", this._onmousedown, false);
-  }
-  unregister() {
-    this.host.removeEventListener("mousedown", this._onmousedown, false);
-    this.release();
-  }
-
-  _onmousedown(event) {
-    if ( event.buttons === 1
-         && this.modifiers === modifiersOf(event)
-         && event.target.matches(this.selector) ) {
-      event.stopPropagation();
-     if ( this.dragging )
-        return;
-
-      // drag state
-      this._originalTarget = event.target;
-      this._startOffsetX = event.offsetX;
-      this._startOffsetY = event.offsetY;
-      this._x0 = this._x = event.pageX;
-      this._y0 = this._y = event.pageY;
-
-      // start listening
-      document.addEventListener("mousemove", this._onmousemove, false);
-      document.addEventListener("mouseup", this._onmouseup, false);
-      document.addEventListener("keyup", this._onkeyup, false);
-    }
-  }
-  _onmouseup(event) {
-    if ( (event.buttons & 1) !== 1 )
-      this.release();
-  }
-  _onkeyup(event) {
-    if ( (modifiersOf(event) & this.modifiers) !== this.modifiers )
-      this.release();
-  }
-  _onmousemove(event) {
-    // dragstart
-    if ( !this.dragging ) {
-      let cancelled = !this.ondragstart({
-        originalTarget: this._originalTarget,
-        startOffsetX: this._startOffsetX,
-        startOffsetY: this._startOffsetY,
-        movementX: 0,
-        movementY: 0,
-        deltaX: 0,
-        deltaY: 0,
-      })
-      if ( cancelled )
-        return;
-      this.dragging = true;
-      event.preventDefault();
-    }
-
-    // drag
-    if ( this.dragging ) {
-      let movementX = event.pageX - this._x;
-      let movementY = event.pageY - this._y;
-      let deltaX = event.pageX - this._x0;
-      let deltaY = event.pageY - this._y0;
-      this._x = event.pageX;
-      this._y = event.pageY;
-
-      this.ondrag({
-        originalTarget: this._originalTarget,
-        startOffsetX: this._startOffsetX,
-        startOffsetY: this._startOffsetY,
-        movementX,
-        movementY,
-        deltaX,
-        deltaY,
-      });
-      event.preventDefault();
-    }
-  }
-  release() {
-    if ( this.dragging ) {
-      // dragend
-      let deltaX = this._x - this._x0;
-      let deltaY = this._y - this._y0;
-      this.ondragend({
-        originalTarget: this._originalTarget,
-        startOffsetX: this._startOffsetX,
-        startOffsetY: this._startOffsetY,
-        movementX: 0,
-        movementY: 0,
-        deltaX,
-        deltaY,
-      });
-      this.dragging = false;
-      event.preventDefault();
-    }
-
-    document.removeEventListener("mousemove", this._onmousemove, false);
-    document.removeEventListener("mouseup", this._onmouseup, false);
-    document.removeEventListener("keyup", this._onkeyup, false);
-  }
-}
-
 function makeShifter(expr, unit="px") {
   let shift = String.raw`(-?\d+(?:.\d+)?)${unit}`;
   let shifted = String.raw`(.+) \+ ${shift}`;
@@ -321,6 +204,11 @@ customElements.define("l7-box", class extends HTMLElement {
     super();
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_box.content.cloneNode(true));
+
+    this.onresizestart = this.onresizestart.bind(this);
+    this.onresize = this.onresize.bind(this);
+    this.onresizecancel = this.onresizecancel.bind(this);
+    this.onresizeend = this.onresizeend.bind(this);
   }
   static get observedAttributes() {
     return ["rect"];
@@ -333,20 +221,17 @@ customElements.define("l7-box", class extends HTMLElement {
     });
     this._observer.observe(this, {childList: true});
 
-    this._resize_handler = new DragHandler({}, ":host(:not([slot])) > .handle, \
-:host([slot='top']) > .handle:not(.interior):not(.end), \
-:host([slot='left']) > .handle:not(.interior):not(.end), \
-:host([slot='bottom']) > .handle:not(.interior):not(.start), \
-:host([slot='right']) > .handle:not(.interior):not(.start)",
-      this.onresizestart.bind(this),
-      this.onresize.bind(this),
-      this.onresizeend.bind(this)
-    );
-    this._resize_handler.register(this.shadowRoot);
+    this.shadowRoot.addEventListener("pointerdown", this.onresizestart);
+    this.shadowRoot.addEventListener("pointermove", this.onresize);
+    this.shadowRoot.addEventListener("pointercancel", this.onresizecancel);
+    this.shadowRoot.addEventListener("pointerup", this.onresizeend);
   }
   disconnectedCallback() {
     this._observer.disconnect();
-    this._resize_handler.unregister();
+    this.shadowRoot.removeEventListener("pointerdown", this.onresizestart);
+    this.shadowRoot.removeEventListener("pointermove", this.onresize);
+    this.shadowRoot.removeEventListener("pointercancel", this.onresizecancel);
+    this.shadowRoot.removeEventListener("pointerup", this.onresizeend);
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
@@ -369,71 +254,92 @@ customElements.define("l7-box", class extends HTMLElement {
   }
 
   onresizestart(event) {
-    this.closest(".root").classList.add("moving");
+    if ( event.buttons === 1
+         && modifiersOf(event) === 0
+         && event.target.matches(":host(:not([slot])) > .handle,\
+         :host([slot='top']) > .handle:not(.interior):not(.end),\
+         :host([slot='left']) > .handle:not(.interior):not(.end),\
+         :host([slot='bottom']) > .handle:not(.interior):not(.start),\
+         :host([slot='right']) > .handle:not(.interior):not(.start)") ) {
+      event.stopPropagation();
+      event.target.setPointerCapture(event.pointerId);
+      this.classList.add("resizing");
 
-    let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
-    parentWidth = parseFloat(parentWidth);
-    parentHeight = parseFloat(parentHeight);
-    this._parentWidth = parentWidth;
-    this._parentHeight = parentHeight;
+      let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
+      this._parentWidth = parseFloat(parentWidth);
+      this._parentHeight = parseFloat(parentHeight);
+      let {left, top, width, height} = this.rect;
+      this._original_rect = {left, top, width, height};
 
-    let {left, top, width, height} = this.rect;
-    let left_shifter = makeShifter(left, "%");
-    let width_shifter = makeShifter(width, "%");
-    let top_shifter = makeShifter(top, "%");
-    let height_shifter = makeShifter(height, "%");
+      this._x0 = this._x = event.pageX;
+      this._y0 = this._y = event.pageY;
 
-    this._rect_shifter = {
-      left: ()=>left,
-      top: ()=>top,
-      width: ()=>width,
-      height: ()=>height,
-    };
-    if ( !this.slot ) {
-      if ( event.originalTarget.matches(".left") )
-        this._rect_shifter.left = left_shifter;
-      if ( event.originalTarget.matches(".right:not(.left)") )
-        this._rect_shifter.width = width_shifter;
-      if ( event.originalTarget.matches(".left:not(.right)") )
-        this._rect_shifter.width = value => width_shifter(-value);
-      if ( event.originalTarget.matches(".top") )
-        this._rect_shifter.top = top_shifter;
-      if ( event.originalTarget.matches(".bottom:not(.top)") )
-        this._rect_shifter.height = height_shifter;
-      if ( event.originalTarget.matches(".top:not(.bottom)") )
-        this._rect_shifter.height = value => height_shifter(-value);
+      this._rect_shifter = {
+        left: ()=>left,
+        top: ()=>top,
+        width: ()=>width,
+        height: ()=>height,
+      };
+      let left_shifter = makeShifter(left, "%");
+      let width_shifter = makeShifter(width, "%");
+      let top_shifter = makeShifter(top, "%");
+      let height_shifter = makeShifter(height, "%");
+      if ( !this.slot ) {
+        if ( event.target.matches(".left") )
+          this._rect_shifter.left = left_shifter;
+        if ( event.target.matches(".right:not(.left)") )
+          this._rect_shifter.width = width_shifter;
+        if ( event.target.matches(".left:not(.right)") )
+          this._rect_shifter.width = value => width_shifter(-value);
+        if ( event.target.matches(".top") )
+          this._rect_shifter.top = top_shifter;
+        if ( event.target.matches(".bottom:not(.top)") )
+          this._rect_shifter.height = height_shifter;
+        if ( event.target.matches(".top:not(.bottom)") )
+          this._rect_shifter.height = value => height_shifter(-value);
 
-    } else if ( this.slot === "top" || this.slot === "left" ) {
-      if ( event.originalTarget.matches(".left") ) {
-        this._rect_shifter.left = left_shifter;
-        this._rect_shifter.width = value => width_shifter(-value);
+      } else if ( this.slot === "top" || this.slot === "left" ) {
+        if ( event.target.matches(".left") ) {
+          this._rect_shifter.left = left_shifter;
+          this._rect_shifter.width = value => width_shifter(-value);
+        }
+        if ( event.target.matches(".top") ) {
+          this._rect_shifter.top = top_shifter;
+          this._rect_shifter.height = value => height_shifter(-value);
+        }
+
+      } else if ( this.slot === "bottom" || this.slot === "right" ) {
+        if ( event.target.matches(".right") )
+          this._rect_shifter.width = width_shifter;
+        if ( event.target.matches(".bottom") )
+          this._rect_shifter.height = height_shifter;
       }
-      if ( event.originalTarget.matches(".top") ) {
-        this._rect_shifter.top = top_shifter;
-        this._rect_shifter.height = value => height_shifter(-value);
-      }
 
-    } else if ( this.slot === "bottom" || this.slot === "right" ) {
-      if ( event.originalTarget.matches(".right") )
-        this._rect_shifter.width = width_shifter;
-      if ( event.originalTarget.matches(".bottom") )
-        this._rect_shifter.height = height_shifter;
     }
-
-    return true;
   }
   onresize(event) {
-    let shiftX = 100*event.deltaX/this._parentWidth;
-    let shiftY = 100*event.deltaY/this._parentHeight;
+    if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".resizing") ) {
+      this._x = event.pageX;
+      this._y = event.pageY;
 
-    let left = this._rect_shifter.left(shiftX);
-    let width = this._rect_shifter.width(shiftX);
-    let top = this._rect_shifter.top(shiftY);
-    let height = this._rect_shifter.height(shiftY);
-    this.rect = {left, top, width, height};
+      let shiftX = 100*(this._x - this._x0)/this._parentWidth;
+      let shiftY = 100*(this._y - this._y0)/this._parentHeight;
+
+      let left = this._rect_shifter.left(shiftX);
+      let width = this._rect_shifter.width(shiftX);
+      let top = this._rect_shifter.top(shiftY);
+      let height = this._rect_shifter.height(shiftY);
+      this.rect = {left, top, width, height};
+    }
+  }
+  onresizecancel(event) {
+    this.rect = this._original_rect;
+    event.target.releasePointerCapture(event.pointerId);
+    this.classList.remove("resizing");
   }
   onresizeend(event) {
-    this.closest(".root").classList.remove("moving");
+    event.target.releasePointerCapture(event.pointerId);
+    this.classList.remove("resizing");
   }
 });
 
@@ -616,17 +522,20 @@ customElements.define("l7-port", class extends HTMLElement {
     super();
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_port.content.cloneNode(true));
+
+    this.onmovestart = this.onmovestart.bind(this);
+    this.onmove = this.onmove.bind(this);
+    this.onmovecancel = this.onmovecancel.bind(this);
+    this.onmoveend = this.onmoveend.bind(this);
   }
   static get observedAttributes() {
     return ["offset"];
   }
   connectedCallback() {
-    this._move_handler = new DragHandler({}, ".handle, l7-box",
-      this.onmovestart.bind(this),
-      this.onmove.bind(this),
-      this.onmoveend.bind(this)
-    );
-    this._move_handler.register(this.shadowRoot);
+    this.shadowRoot.addEventListener("pointerdown", this.onmovestart);
+    this.shadowRoot.addEventListener("pointermove", this.onmove);
+    this.shadowRoot.addEventListener("pointercancel", this.onmovecancel);
+    this.shadowRoot.addEventListener("pointerup", this.onmoveend);
   }
   disconnectedCallback() {
     this._move_handler.unregister();
@@ -647,30 +556,49 @@ customElements.define("l7-port", class extends HTMLElement {
   }
 
   onmovestart(event) {
-    this.closest(".root").classList.add("moving");
+    if ( event.buttons === 1
+         && modifiersOf(event) === 0
+         && event.target.matches(".handle, l7-box") ) {
+      event.stopPropagation();
+      event.target.setPointerCapture(event.pointerId);
+      this.classList.add("moving");
 
-    let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
-    parentWidth = parseFloat(parentWidth);
-    parentHeight = parseFloat(parentHeight);
-    this._parentWidth = parentWidth;
-    this._parentHeight = parentHeight;
+      let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
+      parentWidth = parseFloat(parentWidth);
+      parentHeight = parseFloat(parentHeight);
+      this._parentWidth = parentWidth;
+      this._parentHeight = parentHeight;
+      this._original_offset = this.offset;
 
-    let offset_shifter = makeShifter(this.offset, "%");
+      this._x0 = this._x = event.pageX;
+      this._y0 = this._y = event.pageY;
 
-    if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
-      this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftX);
-    if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
-      this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftY);
+      let offset_shifter = makeShifter(this.offset, "%");
 
-    return true;
+      if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
+        this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftX);
+      if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
+        this._offset_shifter = (shiftX, shiftY) => offset_shifter(shiftY);
+    }
   }
   onmove(event) {
-    let shiftX = 100*event.deltaX/this._parentWidth;
-    let shiftY = 100*event.deltaY/this._parentHeight;
-    this.offset = this._offset_shifter(shiftX, shiftY);
+    if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".moving") ) {
+      this._x = event.pageX;
+      this._y = event.pageY;
+
+      let shiftX = 100*(this._x - this._x0)/this._parentWidth;
+      let shiftY = 100*(this._y - this._y0)/this._parentHeight;
+      this.offset = this._offset_shifter(shiftX, shiftY);
+    }
+  }
+  onmovecancel(event) {
+    this.offset = this._original_offset;
+    event.target.releasePointerCapture(event.pointerId);
+    this.classList.remove("moving");
   }
   onmoveend(event) {
-    this.closest(".root").classList.remove("moving");
+    event.target.releasePointerCapture(event.pointerId);
+    this.classList.remove("moving");
   }
 });
 
