@@ -458,6 +458,16 @@ customElements.define("l7-border", class extends HTMLElement {
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_border.content.cloneNode(true));
   }
+  static get observedAttributes() {
+    return ["name"];
+  }
+  attributeChangedCallback(name, old, value) {
+    if ( old !== value ) {
+      if ( name === "name" ) {
+        this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
+      }
+    }
+  }
 });
 
 const template_port = document.createElement("template");
@@ -529,7 +539,7 @@ customElements.define("l7-port", class extends HTMLElement {
     this.onmoveend = this.onmoveend.bind(this);
   }
   static get observedAttributes() {
-    return ["offset"];
+    return ["offset", "name"];
   }
   connectedCallback() {
     this.shadowRoot.addEventListener("pointerdown", this.onmovestart);
@@ -544,6 +554,9 @@ customElements.define("l7-port", class extends HTMLElement {
     if ( old !== value ) {
       if ( name === "offset" ) {
         this.style.setProperty("--offset", `calc(clamp(0%, ${this.offset}, 100%))`);
+      }
+      if ( name === "name" ) {
+        this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
       }
     }
   }
