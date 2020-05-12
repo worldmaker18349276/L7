@@ -275,45 +275,45 @@ template_box.innerHTML = `
   --clip-bottom: 1;
 }
 
-:host([slot="top"])  .handle.corner.bottom.right,
-:host([slot="left"]) .handle.corner.bottom.right,
-:host([slot="bottom"]) .handle.corner.top.left,
-:host([slot="right"])  .handle.corner.top.left {
+:host([slot="top"])  .handle.corner.end,
+:host([slot="left"]) .handle.corner.end,
+:host([slot="bottom"]) .handle.corner.start,
+:host([slot="right"])  .handle.corner.start {
   cursor: pointer;
 }
-:host([slot="top"])  .dot.corner.bottom.right,
-:host([slot="left"]) .dot.corner.bottom.right,
-:host([slot="bottom"]) .dot.corner.top.left,
-:host([slot="right"])  .dot.corner.top.left {
+:host([slot="top"])  .dot.corner.end,
+:host([slot="left"]) .dot.corner.end,
+:host([slot="bottom"]) .dot.corner.start,
+:host([slot="right"])  .dot.corner.start {
   display: block;
 }
-:host([slot="top"]:hover)  .shadow.corner.bottom.right,
-:host([slot="left"]:hover) .shadow.corner.bottom.right,
-:host([slot="bottom"]:hover) .shadow.corner.top.left,
-:host([slot="right"]:hover)  .shadow.corner.top.left {
+:host([slot="top"]:hover)  .shadow.corner.end,
+:host([slot="left"]:hover) .shadow.corner.end,
+:host([slot="bottom"]:hover) .shadow.corner.start,
+:host([slot="right"]:hover)  .shadow.corner.start {
   display: block;
 }
-:host([slot="top"])  .handle.corner.bottom.right:hover ~ .dot.corner.bottom.right,
-:host([slot="left"]) .handle.corner.bottom.right:hover ~ .dot.corner.bottom.right,
-:host([slot="bottom"]) .handle.corner.top.left:hover ~ .dot.corner.top.left,
-:host([slot="right"])  .handle.corner.top.left:hover ~ .dot.corner.top.left {
+:host([slot="top"])  .handle.corner.end:hover ~ .dot.corner.end,
+:host([slot="left"]) .handle.corner.end:hover ~ .dot.corner.end,
+:host([slot="bottom"]) .handle.corner.start:hover ~ .dot.corner.start,
+:host([slot="right"])  .handle.corner.start:hover ~ .dot.corner.start {
   --frameColor: var(--focusColor);
 }
 </style>
 
 <div class="handle interior top left right bottom"></div>
-<div class="handle corner top left"></div>
+<div class="handle corner top left start"></div>
 <div class="handle corner top right"></div>
 <div class="handle corner bottom left"></div>
-<div class="handle corner bottom right"></div>
+<div class="handle corner bottom right end"></div>
 <slot name="top"></slot>
 <slot name="left"></slot>
 <slot name="right"></slot>
 <slot name="bottom"></slot>
-<div class="shadow corner top left"></div>
-<div class="dot corner top left"></div>
-<div class="shadow corner bottom right"></div>
-<div class="dot corner bottom right"></div>
+<div class="shadow corner top left start"></div>
+<div class="dot corner top left start"></div>
+<div class="shadow corner bottom right end"></div>
+<div class="dot corner bottom right end"></div>
 <slot></slot>
 `;
 customElements.define("l7-box", class extends HTMLElement {
@@ -333,7 +333,11 @@ customElements.define("l7-box", class extends HTMLElement {
     });
     this._observer.observe(this, {childList: true});
 
-    this._resize_handler = new DragHandler({}, ".handle",
+    this._resize_handler = new DragHandler({}, ":host(:not([slot])) > .handle, \
+:host([slot='top']) > .handle:not(.interior):not(.end), \
+:host([slot='left']) > .handle:not(.interior):not(.end), \
+:host([slot='bottom']) > .handle:not(.interior):not(.start), \
+:host([slot='right']) > .handle:not(.interior):not(.start)",
       this.onresizestart.bind(this),
       this.onresize.bind(this),
       this.onresizeend.bind(this)
@@ -385,18 +389,36 @@ customElements.define("l7-box", class extends HTMLElement {
       width: ()=>width,
       height: ()=>height,
     };
-    if ( event.originalTarget.matches(".left") )
-      this._rect_shifter.left = left_shifter;
-    if ( event.originalTarget.matches(".right:not(.left)") )
-      this._rect_shifter.width = width_shifter;
-    if ( event.originalTarget.matches(".left:not(.right)") )
-      this._rect_shifter.width = value => width_shifter(-value);
-    if ( event.originalTarget.matches(".top") )
-      this._rect_shifter.top = top_shifter;
-    if ( event.originalTarget.matches(".bottom:not(.top)") )
-      this._rect_shifter.height = height_shifter;
-    if ( event.originalTarget.matches(".top:not(.bottom)") )
-      this._rect_shifter.height = value => height_shifter(-value);
+    if ( !this.slot ) {
+      if ( event.originalTarget.matches(".left") )
+        this._rect_shifter.left = left_shifter;
+      if ( event.originalTarget.matches(".right:not(.left)") )
+        this._rect_shifter.width = width_shifter;
+      if ( event.originalTarget.matches(".left:not(.right)") )
+        this._rect_shifter.width = value => width_shifter(-value);
+      if ( event.originalTarget.matches(".top") )
+        this._rect_shifter.top = top_shifter;
+      if ( event.originalTarget.matches(".bottom:not(.top)") )
+        this._rect_shifter.height = height_shifter;
+      if ( event.originalTarget.matches(".top:not(.bottom)") )
+        this._rect_shifter.height = value => height_shifter(-value);
+
+    } else if ( this.slot === "top" || this.slot === "left" ) {
+      if ( event.originalTarget.matches(".left") ) {
+        this._rect_shifter.left = left_shifter;
+        this._rect_shifter.width = value => width_shifter(-value);
+      }
+      if ( event.originalTarget.matches(".top") ) {
+        this._rect_shifter.top = top_shifter;
+        this._rect_shifter.height = value => height_shifter(-value);
+      }
+
+    } else if ( this.slot === "bottom" || this.slot === "right" ) {
+      if ( event.originalTarget.matches(".right") )
+        this._rect_shifter.width = width_shifter;
+      if ( event.originalTarget.matches(".bottom") )
+        this._rect_shifter.height = height_shifter;
+    }
 
     return true;
   }
@@ -599,7 +621,7 @@ customElements.define("l7-port", class extends HTMLElement {
     return ["offset"];
   }
   connectedCallback() {
-    this._move_handler = new DragHandler({}, ".handle",
+    this._move_handler = new DragHandler({}, ".handle, l7-box",
       this.onmovestart.bind(this),
       this.onmove.bind(this),
       this.onmoveend.bind(this)
