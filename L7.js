@@ -196,9 +196,16 @@ customElements.define("l7-box", class extends HTMLElement {
   }
   connectedCallback() {
     this._observer = new MutationObserver(mutations => {
-      for ( let side of ["top", "bottom", "right", "left"] )
-        for ( let [i, border] of this.querySelectorAll(`:scope > l7-border[slot="${side}"]`).entries() )
+      for ( let side of ["top", "left"] ) {
+        let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
+        for ( let [i, border] of borders.entries() )
           border.style.setProperty("--i", i);
+      }
+      for ( let side of ["bottom", "right"] ) {
+        let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
+        for ( let [i, border] of borders.reverse().entries() )
+          border.style.setProperty("--i", i);
+      }
     });
     this._observer.observe(this, {childList: true});
 
