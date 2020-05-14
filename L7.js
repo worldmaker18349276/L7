@@ -186,6 +186,7 @@ customElements.define("l7-box", class extends HTMLElement {
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_box.content.cloneNode(true));
 
+    this.onborderschange = this.onborderschange.bind(this);
     this.onresizestart = this.onresizestart.bind(this);
     this.onresize = this.onresize.bind(this);
     this.onresizecancel = this.onresizecancel.bind(this);
@@ -195,18 +196,7 @@ customElements.define("l7-box", class extends HTMLElement {
     return ["rect"];
   }
   connectedCallback() {
-    this._observer = new MutationObserver(mutations => {
-      for ( let side of ["top", "left"] ) {
-        let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
-        for ( let [i, border] of borders.entries() )
-          border.style.setProperty("--i", i);
-      }
-      for ( let side of ["bottom", "right"] ) {
-        let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
-        for ( let [i, border] of borders.reverse().entries() )
-          border.style.setProperty("--i", i);
-      }
-    });
+    this._observer = new MutationObserver(this.onborderschange);
     this._observer.observe(this, {childList: true});
 
     this.shadowRoot.addEventListener("pointerdown", this.onresizestart);
@@ -241,6 +231,71 @@ customElements.define("l7-box", class extends HTMLElement {
     this.setAttribute("rect", [left, top, width, height].join(";"));
   }
 
+  makeResizer(mode=["bottom", "right"]) {
+    let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
+    parentWidth = parseFloat(parentWidth);
+    parentHeight = parseFloat(parentHeight);
+    let original_rect = this.rect;
+
+    let {left, top, width, height} = getComputedStyle(this);
+    left = parseFloat(left);
+    top = parseFloat(top);
+    width = parseFloat(width);
+    height = parseFloat(height);
+
+    let xmin = -Infinity,
+        xmax = +Infinity,
+        ymin = -Infinity,
+        ymax = +Infinity;
+    if ( mode.includes("left") && !mode.includes("right") )
+      xmax = width;
+    if ( !mode.includes("left") && mode.includes("right") )
+      xmin = -width;
+    if ( mode.includes("top") && !mode.includes("bottom") )
+      ymax = height;
+    if ( !mode.includes("top") && mode.includes("bottom") )
+      ymin = -height;
+
+    return (shiftX, shiftY) => {
+      let rect = Object.assign(original_rect, {});
+      if ( shiftX === undefined || shiftY === undefined )
+        return rect;
+
+      shiftX = Math.max(xmin, Math.min(shiftX, xmax));
+      shiftY = Math.max(ymin, Math.min(shiftY, ymax));
+
+      if ( mode.includes("left") )
+        rect.left = `${100*(left+shiftX)/parentWidth}%`;
+
+      if ( !mode.includes("left") && mode.includes("right") )
+        rect.width = `${100*(width+shiftX)/parentWidth}%`;
+      if ( mode.includes("left") && !mode.includes("right") )
+        rect.width = `${100*(width-shiftX)/parentWidth}%`;
+
+      if ( mode.includes("top") )
+        rect.top = `${100*(top+shiftY)/parentHeight}%`;
+
+      if ( !mode.includes("top") && mode.includes("bottom") )
+        rect.height = `${100*(height+shiftY)/parentHeight}%`;
+      if ( mode.includes("top") && !mode.includes("bottom") )
+        rect.height = `${100*(height-shiftY)/parentHeight}%`;
+
+      return rect;
+    };
+  }
+
+  onborderschange() {
+    for ( let side of ["top", "left"] ) {
+      let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
+      for ( let [i, border] of borders.entries() )
+        border.style.setProperty("--i", i);
+    }
+    for ( let side of ["bottom", "right"] ) {
+      let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
+      for ( let [i, border] of borders.reverse().entries() )
+        border.style.setProperty("--i", i);
+    }
+  }
   onresizestart(event) {
     if ( event.buttons === 1
          && modifiersOf(event) === 0
@@ -255,52 +310,17 @@ customElements.define("l7-box", class extends HTMLElement {
       this._x0 = event.pageX;
       this._y0 = event.pageY;
 
-      let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
-      parentWidth = parseFloat(parentWidth);
-      parentHeight = parseFloat(parentHeight);
-      this._original_rect = this.rect;
-      let {left, top, width, height} = getComputedStyle(this);
-      left = parseFloat(left);
-      top = parseFloat(top);
-      width = parseFloat(width);
-      height = parseFloat(height);
-
-      this._rect_shifter = {
-        left: ()=>this._original_rect.left,
-        top: ()=>this._original_rect.top,
-        width: ()=>this._original_rect.width,
-        height: ()=>this._original_rect.height,
-      };
+      let mode = Array.from(event.target.classList);
       if ( !this.slot ) {
-        if ( event.target.matches(".left") )
-          this._rect_shifter.left = shift => `${100*(left+shift)/parentWidth}%`;
-        if ( event.target.matches(".right:not(.left)") )
-          this._rect_shifter.width = shift => `${100*(width+shift)/parentWidth}%`;
-        if ( event.target.matches(".left:not(.right)") )
-          this._rect_shifter.width = shift => `${100*(width-shift)/parentWidth}%`;
-        if ( event.target.matches(".top") )
-          this._rect_shifter.top = shift => `${100*(top+shift)/parentHeight}%`;
-        if ( event.target.matches(".bottom:not(.top)") )
-          this._rect_shifter.height = shift => `${100*(height+shift)/parentHeight}%`;
-        if ( event.target.matches(".top:not(.bottom)") )
-          this._rect_shifter.height = shift => `${100*(height-shift)/parentHeight}%`;
+        mode = mode.filter(s => ["top", "left", "bottom", "right"].includes(s));
 
       } else if ( this.slot === "top" || this.slot === "left" ) {
-        if ( event.target.matches(".left") ) {
-          this._rect_shifter.left = shift => `${100*(left+shift)/parentWidth}%`;
-          this._rect_shifter.width = shift => `${100*(width-shift)/parentWidth}%`;
-        }
-        if ( event.target.matches(".top") ) {
-          this._rect_shifter.top = shift => `${100*(top+shift)/parentHeight}%`;
-          this._rect_shifter.height = shift => `${100*(height-shift)/parentHeight}%`;
-        }
+        mode = mode.filter(s => ["top", "left"].includes(s));
 
       } else if ( this.slot === "bottom" || this.slot === "right" ) {
-        if ( event.target.matches(".right") )
-          this._rect_shifter.width = shift => `${100*(width+shift)/parentWidth}%`;
-        if ( event.target.matches(".bottom") )
-          this._rect_shifter.height = shift => `${100*(height+shift)/parentHeight}%`;
+        mode = mode.filter(s => ["bottom", "right"].includes(s));
       }
+      this._resizer = this.makeResizer(mode);
 
     }
   }
@@ -308,16 +328,11 @@ customElements.define("l7-box", class extends HTMLElement {
     if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".resizing") ) {
       let shiftX = event.pageX - this._x0;
       let shiftY = event.pageY - this._y0;
-
-      let left = this._rect_shifter.left(shiftX);
-      let width = this._rect_shifter.width(shiftX);
-      let top = this._rect_shifter.top(shiftY);
-      let height = this._rect_shifter.height(shiftY);
-      this.rect = {left, top, width, height};
+      this.rect = this._resizer(shiftX, shiftY);
     }
   }
   onresizecancel(event) {
-    this.rect = this._original_rect;
+    this.rect = this._resizer();
     event.target.releasePointerCapture(event.pointerId);
     this.classList.remove("resizing");
   }
@@ -331,7 +346,7 @@ const template_border = document.createElement("template");
 template_border.innerHTML = `
 <style>
 :host {
-  --shift: calc(2 * var(--i, 0) * var(--hoverRadius));
+  --shift: calc(min(100%, 2 * var(--i, 0) * var(--hoverRadius)));
 
   position: absolute;
   width: 100%;
@@ -562,6 +577,24 @@ customElements.define("l7-port", class extends HTMLElement {
     this.setAttribute("offset", offset);
   }
 
+  makeShifter() {
+    let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
+    parentWidth = parseFloat(parentWidth);
+    parentHeight = parseFloat(parentHeight);
+    let original_offset = this.offset;
+
+    let {left, top} = getComputedStyle(this.shadowRoot.querySelector(".center"));
+    left = parseFloat(left);
+    top = parseFloat(top);
+
+    if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
+      return (shiftX, shiftY) => shiftX === undefined ? original_offset
+                                 : `${100*Math.max(0, Math.min(left+shiftX, parentWidth))/parentWidth}%`;
+    if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
+      return (shiftX, shiftY) => shiftY === undefined ? original_offset
+                                 : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
+  }
+
   onmovestart(event) {
     if ( event.buttons === 1
          && modifiersOf(event) === 0
@@ -572,29 +605,18 @@ customElements.define("l7-port", class extends HTMLElement {
       this._x0 = event.pageX;
       this._y0 = event.pageY;
 
-      let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
-      parentWidth = parseFloat(parentWidth);
-      parentHeight = parseFloat(parentHeight);
-      let {left, top} = getComputedStyle(this.shadowRoot.querySelector(".center"));
-      left = parseFloat(left);
-      top = parseFloat(top);
-      this._original_offset = this.offset;
-
-      if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
-        this._offset_shifter = (shiftX, shiftY) => `${100*(left+shiftX)/parentWidth}%`;
-      if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
-        this._offset_shifter = (shiftX, shiftY) => `${100*(top+shiftY)/parentHeight}%`;
+      this._shifter = this.makeShifter();
     }
   }
   onmove(event) {
     if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".moving") ) {
       let shiftX = event.pageX - this._x0;
       let shiftY = event.pageY - this._y0;
-      this.offset = this._offset_shifter(shiftX, shiftY);
+      this.offset = this._shifter(shiftX, shiftY);
     }
   }
   onmovecancel(event) {
-    this.offset = this._original_offset;
+    this.offset = this._shifter();
     event.target.releasePointerCapture(event.pointerId);
     this.classList.remove("moving");
   }
