@@ -4,6 +4,78 @@ function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
 
+customElements.define("dragg-able", class extends HTMLElement {
+  constructor() {
+    super();
+
+    this._handlers = new Set();
+    this.onpointerdown = this.onpointerdown.bind(this);
+    this.onpointermove = this.onpointermove.bind(this);
+    this.onpointercancel = this.onpointercancel.bind(this);
+    this.onpointerup = this.onpointerup.bind(this);
+  }
+  connectedCallback() {
+    this.addEventListener("pointerdown", this.onpointerdown);
+    this.addEventListener("pointermove", this.onpointermove);
+    this.addEventListener("pointercancel", this.onpointercancel);
+    this.addEventListener("pointerup", this.onpointerup);
+  }
+  disconnectedCallback() {
+    this.removeEventListener("pointerdown", this.onpointerdown);
+    this.removeEventListener("pointermove", this.onpointermove);
+    this.removeEventListener("pointercancel", this.onpointercancel);
+    this.removeEventListener("pointerup", this.onpointerup);
+  }
+
+  onpointerdown(event) {
+    if ( event.buttons === 1 && modifiersOf(event) === 0 && event.target === this ) {
+      this.dispatchEvent(new CustomEvent("dragg", {
+        bubbles: true,
+        cancelable: false,
+        composed: true,
+        detail: {register: handler => this._handlers.add(handler)}
+      }));
+      if ( this._handlers.size === 0 )
+        return;
+
+      event.stopPropagation();
+      event.target.setPointerCapture(event.pointerId);
+      this._x0 = event.pageX;
+      this._y0 = event.pageY;
+
+      for ( let handler of this._handlers )
+        if ( handler.next().done )
+          this._handlers.delete(handler);
+    }
+  }
+  onpointermove(event) {
+    if ( event.target.hasPointerCapture(event.pointerId) ) {
+      let shiftX = event.pageX - this._x0;
+      let shiftY = event.pageY - this._y0;
+      for ( let handler of this._handlers )
+        if ( handler.next([shiftX, shiftY]).done )
+          this._handlers.delete(handler);
+    }
+  }
+  onpointercancel(event) {
+    if ( event.target.hasPointerCapture(event.pointerId) ) {
+      for ( let handler of this._handlers )
+        handler.throw(new Error("draggcancel"));
+      this._handlers.clear();
+
+      event.target.releasePointerCapture(event.pointerId);
+    }
+  }
+  onpointerup(event) {
+    if ( event.target.hasPointerCapture(event.pointerId) ) {
+      for ( let handler of this._handlers )
+        handler.return();
+      this._handlers.clear();
+
+      event.target.releasePointerCapture(event.pointerId);
+    }
+  }
+});
 
 const template_box = document.createElement("template");
 template_box.innerHTML = `
@@ -165,11 +237,11 @@ template_box.innerHTML = `
 }
 </style>
 
-<div class="handle interior top left right bottom"></div>
-<div class="handle corner top left start"></div>
-<div class="handle corner top right"></div>
-<div class="handle corner bottom left"></div>
-<div class="handle corner bottom right end"></div>
+<dragg-able class="handle interior top left right bottom"></dragg-able>
+<dragg-able class="handle corner top left start"></dragg-able>
+<dragg-able class="handle corner top right"></dragg-able>
+<dragg-able class="handle corner bottom left"></dragg-able>
+<dragg-able class="handle corner bottom right end"></dragg-able>
 <slot name="top"></slot>
 <slot name="left"></slot>
 <slot name="right"></slot>
@@ -187,10 +259,7 @@ customElements.define("l7-box", class extends HTMLElement {
     this.shadowRoot.appendChild(template_box.content.cloneNode(true));
 
     this.onborderschange = this.onborderschange.bind(this);
-    this.onresizestart = this.onresizestart.bind(this);
-    this.onresize = this.onresize.bind(this);
-    this.onresizecancel = this.onresizecancel.bind(this);
-    this.onresizeend = this.onresizeend.bind(this);
+    this.ondragg = this.ondragg.bind(this);
   }
   static get observedAttributes() {
     return ["rect"];
@@ -199,17 +268,11 @@ customElements.define("l7-box", class extends HTMLElement {
     this._observer = new MutationObserver(this.onborderschange);
     this._observer.observe(this, {childList: true});
 
-    this.shadowRoot.addEventListener("pointerdown", this.onresizestart);
-    this.shadowRoot.addEventListener("pointermove", this.onresize);
-    this.shadowRoot.addEventListener("pointercancel", this.onresizecancel);
-    this.shadowRoot.addEventListener("pointerup", this.onresizeend);
+    this.shadowRoot.addEventListener("dragg", this.ondragg);
   }
   disconnectedCallback() {
     this._observer.disconnect();
-    this.shadowRoot.removeEventListener("pointerdown", this.onresizestart);
-    this.shadowRoot.removeEventListener("pointermove", this.onresize);
-    this.shadowRoot.removeEventListener("pointercancel", this.onresizecancel);
-    this.shadowRoot.removeEventListener("pointerup", this.onresizeend);
+    this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
@@ -296,49 +359,40 @@ customElements.define("l7-box", class extends HTMLElement {
         border.style.setProperty("--i", i);
     }
   }
-  onresizestart(event) {
-    if ( event.buttons === 1
-         && modifiersOf(event) === 0
-         && event.target.matches(":host(:not([slot])) > .handle,\
-         :host([slot='top']) > .handle:not(.interior):not(.end),\
-         :host([slot='left']) > .handle:not(.interior):not(.end),\
-         :host([slot='bottom']) > .handle:not(.interior):not(.start),\
-         :host([slot='right']) > .handle:not(.interior):not(.start)") ) {
+  ondragg(event) {
+    if ( !this.slot && event.target.matches(".handle") ) {
+      let mode = Array.from(event.target.classList).filter(s => ["top", "left", "bottom", "right"].includes(s));
+      event.detail.register(this.onresize(mode));
       event.stopPropagation();
-      event.target.setPointerCapture(event.pointerId);
-      this.classList.add("resizing");
-      this._x0 = event.pageX;
-      this._y0 = event.pageY;
 
-      let mode = Array.from(event.target.classList);
-      if ( !this.slot ) {
-        mode = mode.filter(s => ["top", "left", "bottom", "right"].includes(s));
+    } else if ( (this.slot === "top" || this.slot === "left") && event.target.matches(".handle:not(.interior):not(.end)") ) {
+      let mode = Array.from(event.target.classList).filter(s => ["top", "left"].includes(s));
+      event.detail.register(this.onresize(mode));
+      event.stopPropagation();
 
-      } else if ( this.slot === "top" || this.slot === "left" ) {
-        mode = mode.filter(s => ["top", "left"].includes(s));
+    } else if ( (this.slot === "bottom" || this.slot === "right") && event.target.matches(".handle:not(.interior):not(.start)") ) {
+      let mode = Array.from(event.target.classList).filter(s => ["bottom", "right"].includes(s));
+      event.detail.register(this.onresize(mode));
+      event.stopPropagation();
+    }
+  }
+  *onresize(mode) {
+    let resizer = this.makeResizer(mode);
+    this.classList.add("resizing");
 
-      } else if ( this.slot === "bottom" || this.slot === "right" ) {
-        mode = mode.filter(s => ["bottom", "right"].includes(s));
+    try {
+      while ( true ) {
+        let [shiftX, shiftY] = yield;
+        this.rect = resizer(shiftX, shiftY);
       }
-      this._resizer = this.makeResizer(mode);
+
+    } catch {
+      this.rect = resizer();
+
+    } finally {
+      this.classList.remove("resizing");
 
     }
-  }
-  onresize(event) {
-    if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".resizing") ) {
-      let shiftX = event.pageX - this._x0;
-      let shiftY = event.pageY - this._y0;
-      this.rect = this._resizer(shiftX, shiftY);
-    }
-  }
-  onresizecancel(event) {
-    this.rect = this._resizer();
-    event.target.releasePointerCapture(event.pointerId);
-    this.classList.remove("resizing");
-  }
-  onresizeend(event) {
-    event.target.releasePointerCapture(event.pointerId);
-    this.classList.remove("resizing");
   }
 });
 
@@ -446,7 +500,7 @@ template_border.innerHTML = `
 }
 </style>
 
-<div class="part handle"></div>
+<dragg-able class="part handle"></dragg-able>
 <div class="part shadow"></div>
 <div class="part line"></div>
 <slot></slot>
@@ -528,7 +582,7 @@ template_port.innerHTML = `
 </style>
 
 <div class="center"></div>
-<div class="part handle"></div>
+<dragg-able class="part handle"></dragg-able>
 <div class="part shadow"></div>
 <div class="part dot"></div>
 <slot name="top"></slot>
@@ -542,22 +596,16 @@ customElements.define("l7-port", class extends HTMLElement {
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_port.content.cloneNode(true));
 
-    this.onmovestart = this.onmovestart.bind(this);
-    this.onmove = this.onmove.bind(this);
-    this.onmovecancel = this.onmovecancel.bind(this);
-    this.onmoveend = this.onmoveend.bind(this);
+    this.ondragg = this.ondragg.bind(this);
   }
   static get observedAttributes() {
     return ["offset", "name"];
   }
   connectedCallback() {
-    this.shadowRoot.addEventListener("pointerdown", this.onmovestart);
-    this.shadowRoot.addEventListener("pointermove", this.onmove);
-    this.shadowRoot.addEventListener("pointercancel", this.onmovecancel);
-    this.shadowRoot.addEventListener("pointerup", this.onmoveend);
+    this.shadowRoot.addEventListener("dragg", this.ondragg);
   }
   disconnectedCallback() {
-    this._move_handler.unregister();
+    this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
@@ -595,34 +643,29 @@ customElements.define("l7-port", class extends HTMLElement {
                                  : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
   }
 
-  onmovestart(event) {
-    if ( event.buttons === 1
-         && modifiersOf(event) === 0
-         && event.target.matches(".handle, l7-box") ) {
+  ondragg(event) {
+    if ( event.target.matches(".handle, l7-box") ) {
       event.stopPropagation();
-      event.target.setPointerCapture(event.pointerId);
-      this.classList.add("moving");
-      this._x0 = event.pageX;
-      this._y0 = event.pageY;
+      event.detail.register(this.onmove());
+    }
+  }
+  *onmove() {
+    let shifter = this.makeShifter();
+    this.classList.add("moving");
 
-      this._shifter = this.makeShifter();
+    try {
+      while ( true ) {
+        let [shiftX, shiftY] = yield;
+        this.offset = shifter(shiftX, shiftY);
+      }
+
+    } catch {
+      this.offset = shifter();
+
+    } finally {
+      this.classList.remove("moving");
+
     }
-  }
-  onmove(event) {
-    if ( event.target.hasPointerCapture(event.pointerId) && this.matches(".moving") ) {
-      let shiftX = event.pageX - this._x0;
-      let shiftY = event.pageY - this._y0;
-      this.offset = this._shifter(shiftX, shiftY);
-    }
-  }
-  onmovecancel(event) {
-    this.offset = this._shifter();
-    event.target.releasePointerCapture(event.pointerId);
-    this.classList.remove("moving");
-  }
-  onmoveend(event) {
-    event.target.releasePointerCapture(event.pointerId);
-    this.classList.remove("moving");
   }
 });
 
