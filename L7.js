@@ -360,21 +360,32 @@ customElements.define("l7-box", class extends HTMLElement {
     }
   }
   ondragg(event) {
-    if ( !this.slot && event.target.matches(".handle") ) {
-      let mode = Array.from(event.target.classList).filter(s => ["top", "left", "bottom", "right"].includes(s));
-      event.detail.register(this.onresize(mode));
-      event.stopPropagation();
+    let mode;
+    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
+      if ( (this.slot === "top" || this.slot === "left") && event.target.matches(".interior, .end") )
+        return;
+      if ( (this.slot === "bottom" || this.slot === "right") && event.target.matches(".interior, .start") )
+        return;
 
-    } else if ( (this.slot === "top" || this.slot === "left") && event.target.matches(".handle:not(.interior):not(.end)") ) {
-      let mode = Array.from(event.target.classList).filter(s => ["top", "left"].includes(s));
-      event.detail.register(this.onresize(mode));
-      event.stopPropagation();
+      mode = Array.from(event.target.classList);
 
-    } else if ( (this.slot === "bottom" || this.slot === "right") && event.target.matches(".handle:not(.interior):not(.start)") ) {
-      let mode = Array.from(event.target.classList).filter(s => ["bottom", "right"].includes(s));
-      event.detail.register(this.onresize(mode));
-      event.stopPropagation();
+    } else if ( event.target.matches("l7-border") && event.target.parentNode === this ) {
+      mode = [event.target.slot];
+
+    } else {
+      return;
     }
+
+    if ( !this.slot ) {
+      mode = mode.filter(s => ["top", "left", "bottom", "right"].includes(s));
+    } else if ( this.slot === "top" || this.slot === "left" ) {
+      mode = mode.filter(s => ["top", "left"].includes(s));
+    } else if ( this.slot === "bottom" || this.slot === "right" ) {
+      mode = mode.filter(s => ["bottom", "right"].includes(s));
+    }
+
+    event.detail.register(this.onresize(mode));
+    event.stopPropagation();
   }
   *onresize(mode) {
     let resizer = this.makeResizer(mode);
@@ -644,7 +655,11 @@ customElements.define("l7-port", class extends HTMLElement {
   }
 
   ondragg(event) {
-    if ( event.target.matches(".handle, l7-box") ) {
+    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
+      event.stopPropagation();
+      event.detail.register(this.onmove());
+
+    } else if ( event.target.matches("l7-box") && event.target.parentNode === this ) {
       event.stopPropagation();
       event.detail.register(this.onmove());
     }
