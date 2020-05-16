@@ -690,8 +690,44 @@ template_wire.innerHTML = `
 :host {
   --startX: var(--x);
   --startY: var(--y);
-  z-index: 5;
+  pointer-events: none;
+  z-index: 4;
+  --lineColor: var(--strokeColor);
 }
+:host::before {
+  --r: calc(var(--dotRadius) + var(--shadowRadius));
+  background: content-box var(--shadowColor);
+  pointer-events: none;
+  z-index: 1;
+}
+:host::after {
+  box-sizing: border-box;
+  --r: var(--hoverRadius);
+  border: calc(var(--hoverRadius) - var(--dotRadius)) solid transparent;
+  background: content-box var(--frameColor);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: inherit;
+
+  /* outline: 1px dashed blue; */
+  /* outline-offset: -1px; */
+}
+:host::before, :host::after {
+  display: block;
+  position: absolute;
+  content: "";
+
+  left: calc(var(--x) - var(--r));
+  top: calc(var(--y) - var(--r));
+  width: calc(2 * var(--r));
+  height: calc(2 * var(--r));
+}
+:host(:hover) {
+  z-index: 5;
+  --frameColor: var(--focusColor);
+  --lineColor: var(--focusColor);
+}
+
 .seg {
   --length: initial;
   z-index: inherit;
@@ -702,6 +738,7 @@ template_wire.innerHTML = `
   position: absolute;
   --r: calc(var(--lineRadius) + var(--shadowRadius));
   background: content-box var(--shadowColor);
+  pointer-events: auto;
   z-index: inherit;
 }
 .seg::after {
@@ -710,12 +747,9 @@ template_wire.innerHTML = `
   position: absolute;
   --r: var(--hoverRadius);
   border: transparent solid calc(var(--r) - var(--lineRadius));
-  background: content-box var(--strokeColor);
+  background: content-box var(--lineColor);
+  pointer-events: auto;
   z-index: inherit;
-}
-:host(:hover) .seg::after,
-:host(:hover) .seg:empty::before {
-  background-color: var(--focusColor);
 }
 
 /* horizontal */
@@ -746,7 +780,7 @@ template_wire.innerHTML = `
   border: white solid var(--shadowRadius);
   border-left-width: 0px;
   border-right-width: 0px;
-  background: content-box DimGray;
+  background: content-box var(--lineColor);
   pointer-events: none;
 }
 :host([slot="top"]) .seg.odd:empty::before,
@@ -794,7 +828,7 @@ template_wire.innerHTML = `
   border: white solid var(--shadowRadius);
   border-top-width: 0px;
   border-bottom-width: 0px;
-  background: content-box DimGray;
+  background: content-box var(--lineColor);
   pointer-events: none;
 }
 :host([slot="top"]) .seg.even:empty::before,
