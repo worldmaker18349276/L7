@@ -261,9 +261,6 @@ customElements.define("l7-box", class extends HTMLElement {
     this.onborderschange = this.onborderschange.bind(this);
     this.ondragg = this.ondragg.bind(this);
   }
-  static get observedAttributes() {
-    return ["rect"];
-  }
   connectedCallback() {
     this._observer = new MutationObserver(this.onborderschange);
     this._observer.observe(this, {childList: true});
@@ -274,24 +271,19 @@ customElements.define("l7-box", class extends HTMLElement {
     this._observer.disconnect();
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
-  attributeChangedCallback(name, old, value) {
-    if ( old !== value ) {
-      if ( name === "rect" ) {
-        let {left, top, width, height} = this.rect;
-        this.style.setProperty("--left"  , `calc(${left})`);
-        this.style.setProperty("--top"   , `calc(${top})`);
-        this.style.setProperty("--width" , `calc(${width})`);
-        this.style.setProperty("--height", `calc(${height})`);
-      }
-    }
-  }
 
   get rect() {
-    let [left, top, width, height] = this.getAttribute("rect").split(/\s*;\s*/);
+    let left = this.style.getPropertyValue("--left");
+    let top = this.style.getPropertyValue("--top");
+    let width = this.style.getPropertyValue("--width");
+    let height = this.style.getPropertyValue("--height");
     return {left, top, width, height};
   }
   set rect({left, top, width, height}) {
-    this.setAttribute("rect", [left, top, width, height].join(";"));
+    this.style.setProperty("--left", left);
+    this.style.setProperty("--top", top);
+    this.style.setProperty("--width", width);
+    this.style.setProperty("--height", height);
   }
 
   makeResizer(mode=["bottom", "right"]) {
@@ -494,20 +486,20 @@ template_border.innerHTML = `
 }
 
 :host([slot="top"]) ::slotted(*) {
-  --x: var(--offset);
+  --x: calc(clamp(0%, var(--offset), 100%));
   --y: var(--shift);
 }
 :host([slot="bottom"]) ::slotted(*) {
-  --x: var(--offset);
+  --x: calc(clamp(0%, var(--offset), 100%));
   --y: calc(100% - var(--shift));
 }
 :host([slot="left"]) ::slotted(*) {
   --x: var(--shift);
-  --y: var(--offset);
+  --y: calc(clamp(0%, var(--offset), 100%));
 }
 :host([slot="right"]) ::slotted(*) {
   --x: calc(100% - var(--shift));
-  --y: var(--offset);
+  --y: calc(clamp(0%, var(--offset), 100%));
 }
 </style>
 
@@ -610,7 +602,7 @@ customElements.define("l7-port", class extends HTMLElement {
     this.ondragg = this.ondragg.bind(this);
   }
   static get observedAttributes() {
-    return ["offset", "name"];
+    return ["name"];
   }
   connectedCallback() {
     this.shadowRoot.addEventListener("dragg", this.ondragg);
@@ -620,9 +612,6 @@ customElements.define("l7-port", class extends HTMLElement {
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
-      if ( name === "offset" ) {
-        this.style.setProperty("--offset", `calc(clamp(0%, ${this.offset}, 100%))`);
-      }
       if ( name === "name" ) {
         this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
       }
@@ -630,10 +619,10 @@ customElements.define("l7-port", class extends HTMLElement {
   }
 
   get offset() {
-    return this.getAttribute("offset");
+    return this.style.getPropertyValue("--offset");
   }
   set offset(offset) {
-    this.setAttribute("offset", offset);
+    this.style.setProperty("--offset", offset);
   }
 
   makeShifter() {
@@ -931,7 +920,7 @@ customElements.define("l7-wire", class extends HTMLElement {
     this.shadowRoot.appendChild(template_wire.content.cloneNode(true));
   }
   static get observedAttributes() {
-    return ["path"];
+    return ["style"];
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
@@ -959,9 +948,10 @@ customElements.define("l7-wire", class extends HTMLElement {
   }
 
   get path() {
-    return this.getAttribute("path").split(/\s*;\s*/);
+    let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
+    return Array.from(this.style.getPropertyValue("--path").matchAll(regex)).map(res => res[1]);
   }
   set path(value) {
-    return this.setAttribute("path", value.join(";"));
+    return this.style.setProperty("--path", value.join(" "));
   }
 });
