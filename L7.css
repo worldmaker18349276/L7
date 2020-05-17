@@ -14,6 +14,8 @@
   --dotRadius       : calc(var(--scale) * 2px);
   --shadowRadius    : calc(var(--scale) * 1px);
   --hoverRadius     : calc(var(--scale) * 3px);
+  --dashLength1     : calc(var(--scale) * 7px);
+  --dashLength2     : calc(var(--scale) * 10px);
   --shadowColor     : white;
   --strokeColor     : DimGray;
   --hoverColor      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */

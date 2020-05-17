@@ -688,11 +688,19 @@ const template_wire = document.createElement("template");
 template_wire.innerHTML = `
 <style>
 :host {
-  --startX: var(--x);
-  --startY: var(--y);
-  pointer-events: none;
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: calc(max(var(--deltaX), -1 * var(--deltaX)));
+  height: calc(max(var(--deltaY), -1 * var(--deltaY)));
+
   z-index: 4;
   --lineColor: var(--strokeColor);
+}
+:host(:hover) {
+  z-index: 5;
+  --frameColor: var(--focusColor);
+  --lineColor: var(--focusColor);
 }
 :host::before {
   --r: calc(var(--dotRadius) + var(--shadowRadius));
@@ -717,15 +725,16 @@ template_wire.innerHTML = `
   position: absolute;
   content: "";
 
-  left: calc(var(--x) - var(--r));
-  top: calc(var(--y) - var(--r));
+  left: calc(-1 * var(--r));
+  top: calc(-1 * var(--r));
   width: calc(2 * var(--r));
   height: calc(2 * var(--r));
 }
-:host(:hover) {
-  z-index: 5;
-  --frameColor: var(--focusColor);
-  --lineColor: var(--focusColor);
+:host::before {
+  display: none;
+}
+:host(:hover)::before {
+  display: block;
 }
 
 .seg {
@@ -746,10 +755,14 @@ template_wire.innerHTML = `
   display: block;
   position: absolute;
   --r: var(--hoverRadius);
-  border: transparent solid calc(var(--r) - var(--lineRadius));
+  border: calc(var(--r) - var(--lineRadius)) solid transparent;
   background: content-box var(--lineColor);
   pointer-events: auto;
   z-index: inherit;
+}
+.seg:not(:empty)::after {
+  /* outline: 1px dashed blue; */
+  /* outline-offset: -1px; */
 }
 
 /* horizontal */
@@ -777,7 +790,7 @@ template_wire.innerHTML = `
   --r: calc(var(--lineRadius) + var(--shadowRadius));
   height: calc(2 * var(--r));
   top: calc(var(--y-) - var(--r));
-  border: white solid var(--shadowRadius);
+  border: var(--shadowRadius) solid var(--shadowColor);
   border-left-width: 0px;
   border-right-width: 0px;
   background: content-box var(--lineColor);
@@ -798,6 +811,22 @@ template_wire.innerHTML = `
   width: calc(max(0px, -1 * var(--l)));
   left: calc(var(--x-) + var(--l));
   mask-image: linear-gradient(to left, black, transparent);
+}
+:host([type="dashed"][slot="top"]) .seg.odd::after,
+:host([type="dashed"][slot="left"]) .seg.even::after,
+:host([type="dashed"][slot="right"]) .seg.even::after,
+:host([type="dashed"][slot="bottom"]) .seg.odd::after,
+:host([type="dashed"][slot="top"]) .seg.odd:empty::before,
+:host([type="dashed"][slot="left"]) .seg.even:empty::before,
+:host([type="dashed"][slot="right"]) .seg.even:empty::before,
+:host([type="dashed"][slot="bottom"]) .seg.odd:empty::before {
+  background-color: unset;
+  background-image: linear-gradient(to right, var(--lineColor) 0, var(--dashLength1),
+                                    var(--shadowColor) 0, var(--shadowColor) var(--dashLength2));
+  background-size: var(--dashLength2) auto;
+  background-origin: content-box;
+  background-clip: content-box;
+  background-repeat: repeat-x;
 }
 
 /* vertical */
@@ -825,7 +854,7 @@ template_wire.innerHTML = `
   --r: calc(var(--lineRadius) + var(--shadowRadius));
   width: calc(2 * var(--r));
   left: calc(var(--x-) - var(--r));
-  border: white solid var(--shadowRadius);
+  border: var(--shadowRadius) solid var(--shadowColor);
   border-top-width: 0px;
   border-bottom-width: 0px;
   background: content-box var(--lineColor);
@@ -847,34 +876,50 @@ template_wire.innerHTML = `
   top: calc(var(--y-) + var(--l));
   mask-image: linear-gradient(to top, black, transparent);
 }
+:host([type="dashed"][slot="top"]) .seg.even::after,
+:host([type="dashed"][slot="left"]) .seg.odd::after,
+:host([type="dashed"][slot="right"]) .seg.odd::after,
+:host([type="dashed"][slot="bottom"]) .seg.even::after,
+:host([slot="top"]) .seg.even:empty::before,
+:host([slot="left"]) .seg.odd:empty::before,
+:host([slot="right"]) .seg.odd:empty::before,
+:host([slot="bottom"]) .seg.even:empty::before {
+  background-color: unset;
+  background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--dashLength1),
+                                    var(--shadowColor) 0, var(--shadowColor) var(--dashLength2));
+  background-size: auto var(--dashLength2);
+  background-origin: content-box;
+  background-clip: content-box;
+  background-repeat: repeat-y;
+}
 
 /* position calculation */
 :host([slot="top"]) .seg.odd,
 :host([slot="left"]) .seg.even,
 :host([slot="right"]) .seg.even,
 :host([slot="bottom"]) .seg.odd {
-  --l: var(--length, calc(var(--endX, var(--startX, 0px)) - var(--x-)));
+  --l: var(--length, calc(var(--deltaX) - var(--x-)));
   --x: calc(var(--x-) + var(--l));
   --y-: var(--y);
 }
 :host([slot="left"]) > .seg.even,
 :host([slot="right"]) > .seg.even {
-  --x-: var(--startX, 0px);
-  --y: var(--startY, 0px);
+  --x-: 0px;
+  --y: 0px;
 }
 
 :host([slot="top"]) .seg.even,
 :host([slot="left"]) .seg.odd,
 :host([slot="right"]) .seg.odd,
 :host([slot="bottom"]) .seg.even {
-  --l: var(--length, calc(var(--endY, var(--startY, 0px)) - var(--y-)));
+  --l: var(--length, calc(var(--deltaY) - var(--y-)));
   --y: calc(var(--y-) + var(--l));
   --x-: var(--x);
 }
 :host([slot="top"]) > .seg.even,
 :host([slot="bottom"]) > .seg.even {
-  --y-: var(--startY, 0px);
-  --x: var(--startX, 0px);
+  --y-: 0px;
+  --x: 0px;
 }
 </style>
 
