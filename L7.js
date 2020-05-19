@@ -42,6 +42,7 @@ customElements.define("dragg-able", class extends HTMLElement {
       event.target.setPointerCapture(event.pointerId);
       this._x0 = event.pageX;
       this._y0 = event.pageY;
+      this._started = false;
 
       for ( let handler of this._handlers )
         if ( handler.next().done )
@@ -52,15 +53,21 @@ customElements.define("dragg-able", class extends HTMLElement {
     if ( event.target.hasPointerCapture(event.pointerId) ) {
       let shiftX = event.pageX - this._x0;
       let shiftY = event.pageY - this._y0;
-      for ( let handler of this._handlers )
-        if ( handler.next([shiftX, shiftY]).done )
-          this._handlers.delete(handler);
+
+      if ( !this._started )
+        this._started = Math.abs(shiftX) > 3 || Math.abs(shiftY) > 3;
+
+      if ( this._started )
+        for ( let handler of this._handlers )
+          if ( handler.next([shiftX, shiftY]).done )
+            this._handlers.delete(handler);
     }
   }
   onpointercancel(event) {
     if ( event.target.hasPointerCapture(event.pointerId) ) {
-      for ( let handler of this._handlers )
-        handler.throw(new Error("draggcancel"));
+      if ( this._started )
+        for ( let handler of this._handlers )
+          handler.throw(new Error("draggcancel"));
       this._handlers.clear();
 
       event.target.releasePointerCapture(event.pointerId);
@@ -68,8 +75,9 @@ customElements.define("dragg-able", class extends HTMLElement {
   }
   onpointerup(event) {
     if ( event.target.hasPointerCapture(event.pointerId) ) {
-      for ( let handler of this._handlers )
-        handler.return();
+      if ( this._started )
+        for ( let handler of this._handlers )
+          handler.return();
       this._handlers.clear();
 
       event.target.releasePointerCapture(event.pointerId);
