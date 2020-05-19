@@ -10,6 +10,7 @@ head
         l7-wire(slot='top' type='dashed' style='--path:20% 54% -32% -76%;--deltaX:500px;--deltaY:400px;')
     l7-border(slot='top' name='case 2')
       l7-port(name='value 1' style='--offset:60%')
+        l7-wire#wire1-start(slot='bottom' to='wire1-end')
     l7-border(slot='top' name='case 3')
     l7-border(slot='bottom' name='A')
       l7-port(name='x' style='--offset:40%')
@@ -67,6 +68,8 @@ head
 
     l7-box(style='--left:10%;--top:14%;--width:70%;--height:50%')
       l7-border(slot='top')
+        l7-port(style='--offset:50%')
+          l7-wire#wire1-end(slot='top' to='wire1-start' style='--path:-50% 100% -50%;')
       l7-border(slot='bottom' name='True')
       l7-border(slot='bottom' name='False')
       l7-border(slot='left' name='Left')

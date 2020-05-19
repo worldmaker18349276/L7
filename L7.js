@@ -395,10 +395,16 @@ customElements.define("l7-box", class extends HTMLElement {
       while ( true ) {
         let [shiftX, shiftY] = yield;
         this.rect = resizer(shiftX, shiftY);
+
+        for ( let wire of this.querySelectorAll("l7-wire") )
+          wire.updateDelta();
       }
 
     } catch {
       this.rect = resizer();
+
+      for ( let wire of this.querySelectorAll("l7-wire") )
+        wire.updateDelta();
 
     } finally {
       this.classList.remove("resizing");
@@ -669,10 +675,16 @@ customElements.define("l7-port", class extends HTMLElement {
       while ( true ) {
         let [shiftX, shiftY] = yield;
         this.offset = shifter(shiftX, shiftY);
+
+        for ( let wire of this.querySelectorAll("l7-wire") )
+          wire.updateDelta();
       }
 
     } catch {
       this.offset = shifter();
+
+      for ( let wire of this.querySelectorAll("l7-wire") )
+        wire.updateDelta();
 
     } finally {
       this.classList.remove("moving");
@@ -877,10 +889,10 @@ template_wire.innerHTML = `
 :host([type="dashed"][slot="left"]) .seg.odd::after,
 :host([type="dashed"][slot="right"]) .seg.odd::after,
 :host([type="dashed"][slot="bottom"]) .seg.even::after,
-:host([slot="top"]) .seg.even:empty::before,
-:host([slot="left"]) .seg.odd:empty::before,
-:host([slot="right"]) .seg.odd:empty::before,
-:host([slot="bottom"]) .seg.even:empty::before {
+:host([type="dashed"][slot="top"]) .seg.even:empty::before,
+:host([type="dashed"][slot="left"]) .seg.odd:empty::before,
+:host([type="dashed"][slot="right"]) .seg.odd:empty::before,
+:host([type="dashed"][slot="bottom"]) .seg.even:empty::before {
   background-color: unset;
   background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--dashLength1),
                                     var(--shadowColor) 0, var(--shadowColor) var(--dashLength2));
@@ -919,7 +931,6 @@ template_wire.innerHTML = `
   --x: 0px;
 }
 </style>
-
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {
@@ -928,31 +939,59 @@ customElements.define("l7-wire", class extends HTMLElement {
     this.shadowRoot.appendChild(template_wire.content.cloneNode(true));
   }
   static get observedAttributes() {
-    return ["style"];
+    return ["to", "style"];
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
-      let path = this.path;
-      let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
+      if ( name === "style" ) {
+        let path = this.path;
+        let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
 
-      if ( segments.length > path.length ) {
-        segments[path.length].remove();
+        if ( segments.length > path.length ) {
+          segments[path.length].remove();
 
-      } else if ( segments.length < path.length ) {
-        let last = segments[segments.length-1] || this.shadowRoot;
-        for ( let n=segments.length; n<path.length; n++ ) {
-          let seg = document.createElement("div");
-          seg.classList.add("seg");
-          seg.classList.add(n % 2 === 0 ? "even" : "odd");
-          last.appendChild(seg);
-          segments.push(seg);
-          last = seg;
+        } else if ( segments.length < path.length ) {
+          let last = segments[segments.length-1] || this.shadowRoot;
+          for ( let n=segments.length; n<path.length; n++ ) {
+            let seg = document.createElement("div");
+            seg.classList.add("seg");
+            seg.classList.add(n % 2 === 0 ? "even" : "odd");
+            last.appendChild(seg);
+            segments.push(seg);
+            last = seg;
+          }
         }
-      }
 
-      for ( let n=0; n<path.length; n++ )
-        segments[n].style.setProperty("--length", path[n]);
+        for ( let n=0; n<path.length; n++ )
+          segments[n].style.setProperty("--length", path[n]);
+
+      } else if ( name === "to" ) {
+        this.updateDelta();
+      }
     }
+  }
+  connectedCallback() {
+    this.updateDelta();
+  }
+
+  updateDelta() {
+    let target = document.getElementById(this.getAttribute("to"));
+    if ( target === null )
+      return;
+
+    let rect1 = this.getBoundingClientRect();
+    let rect2 = target.getBoundingClientRect();
+    let deltaX = rect2.left - rect1.left;
+    let deltaY = rect2.top - rect1.top;
+
+    requestAnimationFrame(() => {
+      this.style.setProperty("--deltaX", deltaX + "px");
+      this.style.setProperty("--deltaY", deltaY + "px");
+      target.style.setProperty("--deltaX", -deltaX + "px");
+      target.style.setProperty("--deltaY", -deltaY + "px");
+
+      // ...
+    });
   }
 
   get path() {
