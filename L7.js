@@ -1,5 +1,6 @@
 "use strict";
 
+const minHeadLength = 10;
 function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
@@ -700,8 +701,8 @@ template_wire.innerHTML = `
   position: absolute;
   left: var(--x);
   top: var(--y);
-  width: calc(max(var(--deltaX), -1 * var(--deltaX)));
-  height: calc(max(var(--deltaY), -1 * var(--deltaY)));
+  width: 0px;
+  height: 0px;
 
   z-index: 4;
   --lineColor: var(--strokeColor);
@@ -907,7 +908,8 @@ template_wire.innerHTML = `
 :host([slot="left"]) .seg.even,
 :host([slot="right"]) .seg.even,
 :host([slot="bottom"]) .seg.odd {
-  --l: var(--length, calc(var(--deltaX) - var(--x-)));
+  --\\%: calc(var(--deltaX) / 100);
+  --l: var(--length);
   --x: calc(var(--x-) + var(--l));
   --y-: var(--y);
 }
@@ -921,7 +923,8 @@ template_wire.innerHTML = `
 :host([slot="left"]) .seg.odd,
 :host([slot="right"]) .seg.odd,
 :host([slot="bottom"]) .seg.even {
-  --l: var(--length, calc(var(--deltaY) - var(--y-)));
+  --\\%: calc(var(--deltaY) / 100);
+  --l: var(--length);
   --y: calc(var(--y-) + var(--l));
   --x-: var(--x);
 }
@@ -937,14 +940,18 @@ customElements.define("l7-wire", class extends HTMLElement {
     super();
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_wire.content.cloneNode(true));
+    this._requested = false;
   }
   static get observedAttributes() {
-    return ["to", "style"];
+    return ["from", "to", "style"];
   }
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "style" ) {
-        let path = this.path;
+        let path = this.getComputedPath();
+        if ( this.slot === "top" || this.slot === "left" )
+          path = path.reverse().map(p => `-1 * (${p})`);
+
         let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
 
         if ( segments.length > path.length ) {
@@ -963,42 +970,110 @@ customElements.define("l7-wire", class extends HTMLElement {
         }
 
         for ( let n=0; n<path.length; n++ )
-          segments[n].style.setProperty("--length", path[n]);
+          segments[n].style.setProperty("--length", `calc(${path[n]})`);
 
-      } else if ( name === "to" ) {
+      } else if ( name === "from" || name === "to" ) {
         this.updateDelta();
       }
     }
   }
   connectedCallback() {
-    this.updateDelta();
+    requestAnimationFrame(() => this.updateDelta());
   }
 
+  get start() {
+    let start;
+    if ( this.slot === "bottom" || this.slot === "right" )
+      start = this;
+    if ( this.slot === "top" || this.slot === "left" )
+      start = document.getElementById(this.getAttribute("from"));
+    if ( !start || start.slot !== "bottom" && start.slot !== "right" )
+      return;
+    return start;
+  }
+  get end() {
+    let end;
+    if ( this.slot === "bottom" || this.slot === "right" )
+      end = document.getElementById(this.getAttribute("to"));
+    if ( this.slot === "top" || this.slot === "left" )
+      end = this;
+    if ( !end || end.slot !== "top" && end.slot !== "left" )
+      return;
+    return end;
+  }
   updateDelta() {
-    let target = document.getElementById(this.getAttribute("to"));
-    if ( target === null )
+    let start = this.start, end = this.end;
+    if ( !start || !end )
       return;
 
-    let rect1 = this.getBoundingClientRect();
-    let rect2 = target.getBoundingClientRect();
+    let rect1 = start.getBoundingClientRect();
+    let rect2 = end.getBoundingClientRect();
     let deltaX = rect2.left - rect1.left;
     let deltaY = rect2.top - rect1.top;
+    if ( start.slot === "bottom" ) deltaY -= minHeadLength;
+    if ( start.slot === "right" )  deltaX -= minHeadLength;
+    if ( end.slot === "top" )      deltaY -= minHeadLength;
+    if ( end.slot === "left" )     deltaX -= minHeadLength;
 
-    requestAnimationFrame(() => {
-      this.style.setProperty("--deltaX", deltaX + "px");
-      this.style.setProperty("--deltaY", deltaY + "px");
-      target.style.setProperty("--deltaX", -deltaX + "px");
-      target.style.setProperty("--deltaY", -deltaY + "px");
-
-      // ...
-    });
+    start.setDelta(deltaX, deltaY);
+    end.setDelta(deltaX, deltaY);
   }
+  setDelta(deltaX, deltaY) {
+    this._deltaX = deltaX;
+    this._deltaY = deltaY;
 
-  get path() {
+    if ( !this._requested ) {
+      this._requested = true;
+
+      requestAnimationFrame(() => {
+        let signX_old = parseFloat(this.style.getPropertyValue("--deltaX")) >= 0;
+        let signY_old = parseFloat(this.style.getPropertyValue("--deltaY")) >= 0;
+        let signX_curr = this._deltaX >= 0;
+        let signY_curr = this._deltaY >= 0;
+
+        this.style.setProperty("--deltaX", this._deltaX + "px");
+        this.style.setProperty("--deltaY", this._deltaY + "px");
+
+        if ( signX_old !== signX_curr || signY_old !== signY_curr )
+          this.style.removeProperty("--path");
+
+        this._requested = false;
+      });
+    }
+  }
+  getComputedPath() {
+    let path = this.style.getPropertyValue("--path") || this.getDefaultPath();
+
+    // parse path as list of lengths
     let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
-    return Array.from(this.style.getPropertyValue("--path").matchAll(regex)).map(res => res[1]);
+    path = Array.from(path.matchAll(regex)).map(res => res[1]);
+
+    // TODO: deal with fr
+
+    // fake percentage unit
+    path = path.map(p => p.replace("%", " * var(--\\%)"));
+
+    // initial/final head length
+    if ( path[0] )
+      path[0] = `${path[0]} + ${minHeadLength}px`;
+    if ( path[path.length-1] )
+      path[path.length-1] = `${path[path.length-1]} + ${minHeadLength}px`;
+
+    return path;
   }
-  set path(value) {
-    return this.style.setProperty("--path", value.join(" "));
+  getDefaultPath() {
+    let start = this.start, end = this.end;
+    if ( !start || !end )
+      return "";
+
+    switch ( `${start.slot} ${end.slot}` ) {
+      case "bottom top":
+      case "right left":
+        return "max(0px, 50%) 50% min(0px, 100%) 50% max(0px, 50%)";
+
+      case "bottom left":
+      case "right bottom":
+        return "max(0px, 50%) min(0px, 100%) max(0px, 50%) max(0px, 50%) min(0px, 100%) max(0px, 50%)";
+    }
   }
 });
