@@ -352,12 +352,14 @@ customElements.define("l7-box", class extends HTMLElement {
     for ( let side of ["top", "left"] ) {
       let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
       for ( let [i, border] of borders.entries() )
-        border.style.setProperty("--i", i);
+        if ( border.style.getPropertyValue("--order") === "" )
+          border.style.setProperty("--order", i);
     }
     for ( let side of ["bottom", "right"] ) {
       let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
       for ( let [i, border] of borders.reverse().entries() )
-        border.style.setProperty("--i", i);
+        if ( border.style.getPropertyValue("--order") === "" )
+          border.style.setProperty("--order", i);
     }
   }
   ondragg(event) {
@@ -418,7 +420,7 @@ const template_border = document.createElement("template");
 template_border.innerHTML = `
 <style>
 :host {
-  --shift: calc(min(100%, 2 * var(--i, 0) * var(--hoverRadius)));
+  --shift: calc(min(100%, 2 * var(--order, 0) * var(--hoverRadius)));
 
   position: absolute;
   width: 100%;
@@ -528,6 +530,8 @@ customElements.define("l7-border", class extends HTMLElement {
     super();
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_border.content.cloneNode(true));
+
+    this.ondragg = this.ondragg.bind(this);
   }
   static get observedAttributes() {
     return ["name"];
@@ -537,6 +541,82 @@ customElements.define("l7-border", class extends HTMLElement {
       if ( name === "name" ) {
         this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
       }
+    }
+  }
+  connectedCallback() {
+    this.shadowRoot.addEventListener("dragg", this.ondragg);
+  }
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("dragg", this.ondragg);
+  }
+
+  makeSorter(side="top") {
+    let original_borders = [];
+    for ( let border of this.parentNode.querySelectorAll(`:scope > l7-border[slot="${this.slot}"]`) )
+      original_borders[parseInt(border.style.getPropertyValue("--order"))] = border;
+    let original_index = original_borders.indexOf(this);
+
+    let step;
+    if ( original_borders.length <= 1 )
+      step = 0;
+    else if ( side === "top" || side === "bottom" )
+      step = original_borders[1].shadowRoot.querySelector(".handle").offsetTop
+           - original_borders[0].shadowRoot.querySelector(".handle").offsetTop;
+    else if ( side === "left" || side === "right" )
+      step = original_borders[1].shadowRoot.querySelector(".handle").offsetLeft
+           - original_borders[0].shadowRoot.querySelector(".handle").offsetLeft;
+
+    return (shiftX, shiftY) => {
+      let borders = Array.from(original_borders);
+      if ( shiftX === undefined || shiftY === undefined )
+        return borders;
+
+      let shift = side === "top" || side === "bottom" ? shiftY : shiftX;
+      let index = original_index + Math.round(shift/step);
+      index = Math.max(0, Math.min(index, original_borders.length-1));
+
+      borders.splice(original_index, 1);
+      borders.splice(index, 0, this);
+
+      return borders;
+    };
+  }
+
+  ondragg(event) {
+    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
+      if ( this.style.getPropertyValue("--order") === "0" )
+        return;
+
+      event.detail.register(this.onreorder(this.slot));
+      event.stopPropagation();
+    }
+  }
+  *onreorder(side) {
+    let sorter = this.makeSorter(side);
+    this.classList.add("reordering");
+
+    try {
+      while ( true ) {
+        let [shiftX, shiftY] = yield;
+        let borders = sorter(shiftX, shiftY);
+        for ( let [i, border] of borders.entries() )
+          border.style.setProperty("--order", i);
+
+        for ( let wire of this.parentNode.querySelectorAll("l7-wire") )
+          wire.updateDelta();
+      }
+
+    } catch {
+      let borders = sorter();
+      for ( let [i, border] of borders.entries() )
+        border.style.setProperty("--order", i);
+
+      for ( let wire of this.parentNode.querySelectorAll("l7-wire") )
+        wire.updateDelta();
+
+    } finally {
+      this.classList.remove("reordering");
+
     }
   }
 });
