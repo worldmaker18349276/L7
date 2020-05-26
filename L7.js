@@ -5,9 +5,13 @@ function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
 
+const template_draggable = document.createElement("template");
+template_draggable.innerHTML = `<div part="handle"></div><slot></slot>`;
 customElements.define("dragg-able", class extends HTMLElement {
   constructor() {
     super();
+    this.attachShadow({mode: "open"});
+    this.shadowRoot.appendChild(template_draggable.content.cloneNode(true));
 
     this._handlers = new Set();
     this.onpointerdown = this.onpointerdown.bind(this);
@@ -88,6 +92,13 @@ customElements.define("dragg-able", class extends HTMLElement {
     }
   }
 });
+
+// z-index:
+//   1: shadow
+//   2: stroke
+//   3: handle
+//   4: content
+//   5: hovered
 
 const template_box = document.createElement("template");
 template_box.innerHTML = `
@@ -638,7 +649,7 @@ template_port.innerHTML = `
   z-index: 5;
 }
 
-.dot::before, .dot::after {
+.dot::before, .dot::after, .dot::part(handle) {
   content: "";
   display: block;
   position: absolute;
@@ -655,10 +666,13 @@ template_port.innerHTML = `
   z-index: 1;
 }
 .dot::after {
-  box-sizing: border-box;
-  --r: var(--hoverRadius);
-  border: calc(var(--hoverRadius) - var(--dotRadius)) solid transparent;
+  --r: var(--dotRadius);
   background: content-box var(--frameColor);
+  pointer-events: none;
+  z-index: 2;
+}
+.dot::part(handle) {
+  --r: var(--hoverRadius);
   pointer-events: auto;
   cursor: pointer;
   z-index: 3;
