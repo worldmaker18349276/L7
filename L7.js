@@ -41,6 +41,7 @@ customElements.define("dragg-able", class extends HTMLElement {
 
       event.stopPropagation();
       event.target.setPointerCapture(event.pointerId);
+      this.classList.add("dragging");
       this._x0 = event.pageX;
       this._y0 = event.pageY;
       this._started = false;
@@ -72,6 +73,7 @@ customElements.define("dragg-able", class extends HTMLElement {
       this._handlers.clear();
 
       event.target.releasePointerCapture(event.pointerId);
+      this.classList.remove("dragging");
     }
   }
   onpointerup(event) {
@@ -82,6 +84,7 @@ customElements.define("dragg-able", class extends HTMLElement {
       this._handlers.clear();
 
       event.target.releasePointerCapture(event.pointerId);
+      this.classList.remove("dragging");
     }
   }
 });
@@ -635,32 +638,9 @@ template_port.innerHTML = `
   z-index: 5;
 }
 
-.shadow {
-  --r: calc(var(--dotRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
-  pointer-events: none;
-  z-index: 1;
-}
-.dot {
-  --r: var(--dotRadius);
-  background: content-box var(--frameColor);
-  pointer-events: none;
-  z-index: 2;
-}
-.handle {
-  --r: var(--hoverRadius);
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 3;
-
-  /* outline: 1px dashed blue; */
-  /* outline-offset: -1px; */
-}
-.handle:hover ~ .dot, .handle:hover ~ ::slotted(*) {
-  --frameColor: var(--focusColor);
-}
-
-.part {
+.dot::before, .dot::after {
+  content: "";
+  display: block;
   position: absolute;
 
   left: calc(var(--x) - var(--r));
@@ -668,6 +648,31 @@ template_port.innerHTML = `
   width: calc(2 * var(--r));
   height: calc(2 * var(--r));
 }
+.dot::before {
+  --r: calc(var(--dotRadius) + var(--shadowRadius));
+  background: content-box var(--shadowColor);
+  pointer-events: none;
+  z-index: 1;
+}
+.dot::after {
+  box-sizing: border-box;
+  --r: var(--hoverRadius);
+  border: calc(var(--hoverRadius) - var(--dotRadius)) solid transparent;
+  background: content-box var(--frameColor);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 3;
+
+  /* outline: 1px dashed blue; */
+  /* outline-offset: -1px; */
+}
+.dot.dragging {
+  cursor: pointer;
+}
+.dot:hover, .dot:hover ~ ::slotted(*) {
+  --frameColor: var(--focusColor);
+}
+
 .center {
   position: absolute;
 
@@ -680,9 +685,7 @@ template_port.innerHTML = `
 </style>
 
 <div class="center"></div>
-<dragg-able class="part handle"></dragg-able>
-<div class="part shadow"></div>
-<div class="part dot"></div>
+<dragg-able class="dot"></dragg-able>
 <slot name="top"></slot>
 <slot name="left"></slot>
 <slot name="right"></slot>
@@ -708,7 +711,7 @@ customElements.define("l7-port", class extends HTMLElement {
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "name" ) {
-        this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
+        this.shadowRoot.querySelector(".dot").title = this.getAttribute("name");
       }
     }
   }
@@ -739,7 +742,7 @@ customElements.define("l7-port", class extends HTMLElement {
   }
 
   ondragg(event) {
-    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
+    if ( event.target.matches(".dot") && event.target.getRootNode() === this.shadowRoot ) {
       event.stopPropagation();
       event.detail.register(this.onmove());
 
