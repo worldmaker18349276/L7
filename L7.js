@@ -743,7 +743,7 @@ customElements.define("l7-port", class extends HTMLElement {
       event.stopPropagation();
       event.detail.register(this.onmove());
 
-    } else if ( event.target.matches("l7-box") && event.target.parentNode === this ) {
+    } else if ( event.target.matches("l7-box, l7-wire") && event.target.parentNode === this ) {
       event.stopPropagation();
       event.detail.register(this.onmove());
     }
@@ -792,38 +792,35 @@ template_wire.innerHTML = `
   --frameColor: var(--focusColor);
   --lineColor: var(--focusColor);
 }
-:host::before {
+.shadow {
   --r: calc(var(--dotRadius) + var(--shadowRadius));
   background: content-box var(--shadowColor);
   pointer-events: none;
   z-index: 1;
 }
-:host::after {
+.handle {
   box-sizing: border-box;
   --r: var(--hoverRadius);
   border: calc(var(--hoverRadius) - var(--dotRadius)) solid transparent;
   background: content-box var(--frameColor);
   cursor: pointer;
   pointer-events: auto;
-  z-index: inherit;
+  z-index: 6;
 
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
 }
-:host::before, :host::after {
-  display: block;
+.part {
   position: absolute;
-  content: "";
-
   left: calc(-1 * var(--r));
   top: calc(-1 * var(--r));
   width: calc(2 * var(--r));
   height: calc(2 * var(--r));
 }
-:host::before {
+.shadow {
   display: none;
 }
-:host(:hover)::before {
+:host(:hover) .shadow {
   display: block;
 }
 
@@ -1014,6 +1011,9 @@ template_wire.innerHTML = `
   --x: 0px;
 }
 </style>
+
+<dragg-able class="part handle"></dragg-able>
+<div class="part shadow"></div>
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {
