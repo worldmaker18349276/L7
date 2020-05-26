@@ -308,18 +308,15 @@ customElements.define("l7-box", class extends HTMLElement {
     this.style.setProperty("--width", width);
     this.style.setProperty("--height", height);
   }
-
+  get position() {
+    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this;
+    return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
+  }
   makeResizer(mode=["bottom", "right"]) {
-    let {width:parentWidth, height:parentHeight} = getComputedStyle(this.offsetParent);
-    parentWidth = parseFloat(parentWidth);
-    parentHeight = parseFloat(parentHeight);
+    let parentWidth = this.offsetParent.offsetWidth;
+    let parentHeight = this.offsetParent.offsetHeight;
     let original_rect = this.rect;
-
-    let {left, top, width, height} = getComputedStyle(this);
-    left = parseFloat(left);
-    top = parseFloat(top);
-    width = parseFloat(width);
-    height = parseFloat(height);
+    let {left, top, width, height} = this.position;
 
     let xmin = -Infinity,
         xmax = +Infinity,
@@ -361,7 +358,6 @@ customElements.define("l7-box", class extends HTMLElement {
       return rect;
     };
   }
-
   onborderschange() {
     for ( let side of ["top", "left"] ) {
       let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
@@ -760,9 +756,8 @@ customElements.define("l7-port", class extends HTMLElement {
     return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
   }
   makeShifter() {
-    let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
-    parentWidth = parseFloat(parentWidth);
-    parentHeight = parseFloat(parentHeight);
+    let parentWidth = this.offsetWidth;
+    let parentHeight = this.offsetHeight;
     let original_offset = this.offset;
 
     let {left, top} = this.position;
