@@ -809,41 +809,51 @@ template_wire.innerHTML = `
   --frameColor: var(--focusColor);
   --lineColor: var(--focusColor);
 }
-.shadow {
-  --r: calc(var(--dotRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
-  pointer-events: none;
-  z-index: 1;
-}
-.handle {
-  box-sizing: border-box;
-  --r: var(--hoverRadius);
-  border: calc(var(--hoverRadius) - var(--dotRadius)) solid transparent;
-  background: content-box var(--frameColor);
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 6;
-
-  /* outline: 1px dashed blue; */
-  /* outline-offset: -1px; */
-}
-.part {
+.dot::before, .dot::after, .dot::part(handle) {
+  content: "";
+  display: block;
   position: absolute;
+
   left: calc(-1 * var(--r));
   top: calc(-1 * var(--r));
   width: calc(2 * var(--r));
   height: calc(2 * var(--r));
 }
-.shadow {
+.dot::before {
   display: none;
+  --r: calc(var(--dotRadius) + var(--shadowRadius));
+  background: content-box var(--shadowColor);
+  pointer-events: none;
+  z-index: 1;
 }
-:host(:hover) .shadow {
+.dot::after {
+  --r: var(--dotRadius);
+  background: content-box var(--frameColor);
+  pointer-events: none;
+  z-index: 2;
+}
+.dot::part(handle) {
+  --r: var(--hoverRadius);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 3;
+
+  /* outline: 1px dashed blue; */
+  /* outline-offset: -1px; */
+}
+.dot.dragging {
+  cursor: pointer;
+}
+:host(:hover) .dot::before {
   display: block;
 }
 
 .seg {
   --length: initial;
   z-index: inherit;
+}
+:host > .seg {
+  z-index: 1;
 }
 .seg::before {
   content: "";
@@ -1029,8 +1039,7 @@ template_wire.innerHTML = `
 }
 </style>
 
-<dragg-able class="part handle"></dragg-able>
-<div class="part shadow"></div>
+<dragg-able class="dot"></dragg-able>
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {
