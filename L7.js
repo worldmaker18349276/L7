@@ -446,7 +446,19 @@ template_border.innerHTML = `
   z-index: 5;
 }
 
-.shadow {
+.center, .line::before, .line::after, .line::part(handle) {
+  content: "";
+  display: block;
+  position: absolute;
+
+  ---r: calc(-1 * var(--r));
+  --s: calc(var(--shift) - var(--r));
+  --w: calc(2 * var(--r));
+}
+.center {
+  --r: 0px;
+}
+.line::before {
   box-sizing: border-box;
   --r: calc(var(--lineRadius) + var(--shadowRadius));
   background: content-box var(--shadowColor);
@@ -459,13 +471,13 @@ template_border.innerHTML = `
   padding-right:  calc(var(--clip-right, 0) * var(--c));
   padding-bottom: calc(var(--clip-bottom, 0) * var(--c));
 }
-.line {
+.line::after {
   --r: var(--lineRadius);
   background: content-box var(--frameColor);
   pointer-events: none;
   z-index: 2;
 }
-.handle {
+.line::part(handle) {
   --r: var(--hoverRadius);
   pointer-events: auto;
   z-index: 3;
@@ -473,42 +485,47 @@ template_border.innerHTML = `
   /* outline: 1px dashed red; */
   /* outline-offset: -1px; */
 }
-.handle:hover ~ .line, .handle:hover ~ ::slotted(*) {
+.line:hover, .line:hover ~ ::slotted(*) {
   --frameColor: var(--focusColor);
 }
 
-.part {
-  position: absolute;
-
-  ---r: calc(-1 * var(--r));
-  --s: calc(var(--shift) - var(--r));
-  --w: calc(2 * var(--r));
-}
-.part.handle {
+.line::part(handle) {
   ---r: var(--r);
 }
-:host([slot="top"]) .part {
+:host([slot="top"]) .center,
+:host([slot="top"]) .line::before,
+:host([slot="top"]) .line::after,
+:host([slot="top"]) .line::part(handle) {
   left:   var(---r);
   right:  var(---r);
   top:    var(--s);
   height: var(--w);
   cursor: n-resize;
 }
-:host([slot="bottom"]) .part {
+:host([slot="bottom"]) .center,
+:host([slot="bottom"]) .line::before,
+:host([slot="bottom"]) .line::after,
+:host([slot="bottom"]) .line::part(handle) {
   left:   var(---r);
   right:  var(---r);
   bottom: var(--s);
   height: var(--w);
   cursor: s-resize;
 }
-:host([slot="left"]) .part {
+:host([slot="left"]) .center,
+:host([slot="left"]) .line::before,
+:host([slot="left"]) .line::after,
+:host([slot="left"]) .line::part(handle) {
   top:    var(---r);
   bottom: var(---r);
   left:   var(--s);
   width:  var(--w);
   cursor: w-resize;
 }
-:host([slot="right"]) .part {
+:host([slot="right"]) .center,
+:host([slot="right"]) .line::before,
+:host([slot="right"]) .line::after,
+:host([slot="right"]) .line::part(handle) {
   top:    var(---r);
   bottom: var(---r);
   right:  var(--s);
@@ -534,9 +551,8 @@ template_border.innerHTML = `
 }
 </style>
 
-<dragg-able class="part handle"></dragg-able>
-<div class="part shadow"></div>
-<div class="part line"></div>
+<div class="center"></div>
+<dragg-able class="line"></dragg-able>
 <slot></slot>
 `;
 customElements.define("l7-border", class extends HTMLElement {
@@ -553,7 +569,7 @@ customElements.define("l7-border", class extends HTMLElement {
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "name" ) {
-        this.shadowRoot.querySelector(".handle").title = this.getAttribute("name");
+        this.shadowRoot.querySelector(".line").title = this.getAttribute("name");
       }
     }
   }
@@ -564,6 +580,10 @@ customElements.define("l7-border", class extends HTMLElement {
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
 
+  get position() {
+    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".center");
+    return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
+  }
   makeSorter(side="top") {
     let original_borders = [];
     for ( let border of this.parentNode.querySelectorAll(`:scope > l7-border[slot="${this.slot}"]`) )
@@ -574,11 +594,11 @@ customElements.define("l7-border", class extends HTMLElement {
     if ( original_borders.length <= 1 )
       step = 0;
     else if ( side === "top" || side === "bottom" )
-      step = original_borders[1].shadowRoot.querySelector(".handle").offsetTop
-           - original_borders[0].shadowRoot.querySelector(".handle").offsetTop;
+      step = original_borders[1].position.top
+           - original_borders[0].position.top;
     else if ( side === "left" || side === "right" )
-      step = original_borders[1].shadowRoot.querySelector(".handle").offsetLeft
-           - original_borders[0].shadowRoot.querySelector(".handle").offsetLeft;
+      step = original_borders[1].position.left
+           - original_borders[0].position.left;
 
     return (shiftX, shiftY) => {
       let borders = Array.from(original_borders);
@@ -595,9 +615,8 @@ customElements.define("l7-border", class extends HTMLElement {
       return borders;
     };
   }
-
   ondragg(event) {
-    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
+    if ( event.target.matches(".line") && event.target.getRootNode() === this.shadowRoot ) {
       if ( this.style.getPropertyValue("--order") === "0" )
         return;
 
@@ -736,17 +755,17 @@ customElements.define("l7-port", class extends HTMLElement {
   set offset(offset) {
     this.style.setProperty("--offset", offset);
   }
-
+  get position() {
+    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".center");
+    return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
+  }
   makeShifter() {
     let {width:parentWidth, height:parentHeight} = getComputedStyle(this);
     parentWidth = parseFloat(parentWidth);
     parentHeight = parseFloat(parentHeight);
     let original_offset = this.offset;
 
-    let {left, top} = getComputedStyle(this.shadowRoot.querySelector(".center"));
-    left = parseFloat(left);
-    top = parseFloat(top);
-
+    let {left, top} = this.position;
     if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
       return (shiftX, shiftY) => shiftX === undefined ? original_offset
                                  : `${100*Math.max(0, Math.min(left+shiftX, parentWidth))/parentWidth}%`;
@@ -754,7 +773,6 @@ customElements.define("l7-port", class extends HTMLElement {
       return (shiftX, shiftY) => shiftY === undefined ? original_offset
                                  : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
   }
-
   ondragg(event) {
     if ( event.target.matches(".dot") && event.target.getRootNode() === this.shadowRoot ) {
       event.stopPropagation();
