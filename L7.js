@@ -100,6 +100,46 @@ customElements.define("dragg-able", class extends HTMLElement {
 //   4: content
 //   5: hovered
 
+const dot_css = `
+.dot {
+  cursor: pointer;
+  position: absolute;
+}
+.dot::before, .dot::after, .dot::part(handle) {
+  content: "";
+  display: block;
+  position: absolute;
+
+  top: var(---r);
+  left: var(---r);
+  right: var(---r);
+  bottom: var(---r);
+}
+.dot::before {
+  ---r: calc(-1 * (var(--dotRadius) + var(--shadowRadius)));
+  background: content-box var(--shadowColor);
+  pointer-events: none;
+  z-index: 1;
+}
+.dot::after {
+  ---r: calc(-1 * var(--dotRadius));
+  background: content-box var(--frameColor);
+  pointer-events: none;
+  z-index: 2;
+}
+.dot::part(handle) {
+  ---r: calc(-1 * var(--hoverRadius));
+  pointer-events: auto;
+  z-index: 3;
+
+  /* outline: 1px dashed blue; */
+  /* outline-offset: -1px; */
+}
+.dot:hover {
+  --frameColor: var(--focusColor);
+}
+`;
+
 const template_box = document.createElement("template");
 template_box.innerHTML = `
 <style>
@@ -126,71 +166,40 @@ template_box.innerHTML = `
   top:  calc(var(--y) - var(--height));
 }
 
-.handle::part(handle) {
+.handle.interior {
   pointer-events: auto;
   position: absolute;
   z-index: 3;
 
-  ---r: calc(-1 * var(--hoverRadius));
-}
-.handle.interior::part(handle) {
   /* outline: 2px solid yellow; */
   /* outline-offset: -1px; */
 }
-.handle.corner::part(handle) {
-  height: calc(2 * var(--hoverRadius));
-  width:  calc(2 * var(--hoverRadius));
-
-  /* outline: 1px dashed purple; */
-  /* outline-offset: -1px; */
+${dot_css}
+.top {
+  top: 0px;
 }
-.handle.corner.dot::before {
-  display: none;
-  position: absolute;
-  height: calc(2 * (var(--dotRadius) + var(--shadowRadius)));
-  width:  calc(2 * (var(--dotRadius) + var(--shadowRadius)));
-  background: content-box var(--shadowColor);
-  pointer-events: none;
-  z-index: 1;
-
-  ---r: calc(-1 * (var(--dotRadius) + var(--shadowRadius)));
+.left {
+  left: 0px;
 }
-.handle.corner.dot::after {
-  display: none;
-  position: absolute;
-  height: calc(2 * var(--dotRadius));
-  width:  calc(2 * var(--dotRadius));
-  background: content-box var(--frameColor);
-  pointer-events: none;
-  z-index: 2;
-
-  ---r: calc(-1 * var(--dotRadius));
+.right {
+  right: 0px;
 }
-.top::before, .top::after, .top::part(handle) {
-  top: var(---r);
-}
-.left::before, .left::after, .left::part(handle) {
-  left: var(---r);
-}
-.right::before, .right::after, .right::part(handle) {
-  right: var(---r);
-}
-.bottom::before, .bottom::after, .bottom::part(handle) {
-  bottom: var(---r);
+.bottom {
+  bottom: 0px;
 }
 .handle.interior {
   cursor: move;
 }
-.handle.corner.top.left {
+.handle.dot.top.left {
   cursor: nw-resize;
 }
-.handle.corner.top.right {
+.handle.dot.top.right {
   cursor: ne-resize;
 }
-.handle.corner.bottom.left {
+.handle.dot.bottom.left {
   cursor: sw-resize;
 }
-.handle.corner.bottom.right {
+.handle.dot.bottom.right {
   cursor: se-resize;
 }
 
@@ -232,29 +241,27 @@ template_box.innerHTML = `
   --clip-bottom: 1;
 }
 
-:host([slot="top"])  .handle.corner.end,
-:host([slot="left"]) .handle.corner.end,
-:host([slot="bottom"]) .handle.corner.start,
-:host([slot="right"])  .handle.corner.start {
+.dot::before,
+.dot::after {
+  display: none;
+}
+:host([slot="top"]) .dot.end,
+:host([slot="left"]) .dot.end,
+:host([slot="right"]) .dot.start,
+:host([slot="bottom"]) .dot.start {
   cursor: pointer;
 }
-:host([slot="top"])  .dot.corner.end,
-:host([slot="left"]) .dot.corner.end,
-:host([slot="bottom"]) .dot.corner.start,
-:host([slot="right"])  .dot.corner.start {
+:host([slot="top"]) .dot.end::after,
+:host([slot="left"]) .dot.end::after,
+:host([slot="right"]) .dot.start::after,
+:host([slot="bottom"]) .dot.start::after {
   display: block;
 }
-:host([slot="top"]:hover)  .shadow.corner.end,
-:host([slot="left"]:hover) .shadow.corner.end,
-:host([slot="bottom"]:hover) .shadow.corner.start,
-:host([slot="right"]:hover)  .shadow.corner.start {
+:host([slot="top"]:hover) .dot.end::before,
+:host([slot="left"]:hover) .dot.end::before,
+:host([slot="right"]:hover) .dot.start::before,
+:host([slot="bottom"]:hover) .dot.start::before {
   display: block;
-}
-:host([slot="top"])  .handle.corner.end:hover ~ .dot.corner.end,
-:host([slot="left"]) .handle.corner.end:hover ~ .dot.corner.end,
-:host([slot="bottom"]) .handle.corner.start:hover ~ .dot.corner.start,
-:host([slot="right"])  .handle.corner.start:hover ~ .dot.corner.start {
-  --frameColor: var(--focusColor);
 }
 </style>
 
@@ -263,10 +270,10 @@ template_box.innerHTML = `
 <slot name="left"></slot>
 <slot name="right"></slot>
 <slot name="bottom"></slot>
-<dragg-able class="handle corner top left dot start"></dragg-able>
-<dragg-able class="handle corner top right"></dragg-able>
-<dragg-able class="handle corner bottom left"></dragg-able>
-<dragg-able class="handle corner bottom right dot end"></dragg-able>
+<dragg-able class="handle dot top left start"></dragg-able>
+<dragg-able class="handle dot top right"></dragg-able>
+<dragg-able class="handle dot bottom left"></dragg-able>
+<dragg-able class="handle dot bottom right end"></dragg-able>
 <slot></slot>
 `;
 customElements.define("l7-box", class extends HTMLElement {
@@ -666,55 +673,18 @@ template_port.innerHTML = `
   z-index: 5;
 }
 
+${dot_css}
 .dot {
-  cursor: pointer;
-}
-.dot::before, .dot::after, .dot::part(handle) {
-  content: "";
-  display: block;
-  position: absolute;
-
-  left: calc(var(--x) - var(--r));
-  top: calc(var(--y) - var(--r));
-  width: calc(2 * var(--r));
-  height: calc(2 * var(--r));
-}
-.dot::before {
-  --r: calc(var(--dotRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
-  pointer-events: none;
-  z-index: 1;
-}
-.dot::after {
-  --r: var(--dotRadius);
-  background: content-box var(--frameColor);
-  pointer-events: none;
-  z-index: 2;
-}
-.dot::part(handle) {
-  --r: var(--hoverRadius);
-  pointer-events: auto;
-  z-index: 3;
-
-  /* outline: 1px dashed blue; */
-  /* outline-offset: -1px; */
-}
-.dot:hover, .dot:hover ~ ::slotted(*) {
-  --frameColor: var(--focusColor);
-}
-
-.center {
   position: absolute;
 
   left: var(--x);
   top: var(--y);
-  width: 0px;
-  height: 0px;
-  pointer-events: none;
+}
+.dot:hover ~ ::slotted(*) {
+  --frameColor: var(--focusColor);
 }
 </style>
 
-<div class="center"></div>
 <dragg-able class="dot"></dragg-able>
 <slot name="top"></slot>
 <slot name="left"></slot>
@@ -753,7 +723,7 @@ customElements.define("l7-port", class extends HTMLElement {
     this.style.setProperty("--offset", offset);
   }
   get position() {
-    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".center");
+    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".dot");
     return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
   }
   makeShifter() {
@@ -823,39 +793,10 @@ template_wire.innerHTML = `
   --frameColor: var(--focusColor);
   --lineColor: var(--focusColor);
 }
-.dot {
-  cursor: pointer;
-}
-.dot::before, .dot::after, .dot::part(handle) {
-  content: "";
-  display: block;
-  position: absolute;
 
-  left: calc(-1 * var(--r));
-  top: calc(-1 * var(--r));
-  width: calc(2 * var(--r));
-  height: calc(2 * var(--r));
-}
+${dot_css}
 .dot::before {
   display: none;
-  --r: calc(var(--dotRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
-  pointer-events: none;
-  z-index: 1;
-}
-.dot::after {
-  --r: var(--dotRadius);
-  background: content-box var(--frameColor);
-  pointer-events: none;
-  z-index: 2;
-}
-.dot::part(handle) {
-  --r: var(--hoverRadius);
-  pointer-events: auto;
-  z-index: 3;
-
-  /* outline: 1px dashed blue; */
-  /* outline-offset: -1px; */
 }
 :host(:hover) .dot::before {
   display: block;
