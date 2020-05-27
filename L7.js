@@ -689,6 +689,10 @@ ${dot_css}
 .dot:hover ~ ::slotted(*) {
   --frameColor: var(--focusColor);
 }
+:host([type="hidden"]) .dot::before,
+:host([type="hidden"]) .dot::after {
+  display: none;
+}
 </style>
 
 <dragg-able class="dot"></dragg-able>
@@ -801,10 +805,11 @@ template_wire.innerHTML = `
 }
 
 ${dot_css}
+:host([type="dashed"]) .dot::after,
 .dot::before {
   display: none;
 }
-:host(:hover) .dot::before {
+:host(:not([type="dashed"]):hover) .dot::before {
   display: block;
 }
 
@@ -837,6 +842,20 @@ ${dot_css}
 .seg:not(:empty)::after {
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
+}
+
+
+:host([slot="top"]) > .seg::before {
+  padding-bottom: calc(2 * var(--lineRadius) + var(--shadowRadius));
+}
+:host([slot="left"]) > .seg::before {
+  padding-right: calc(2 * var(--lineRadius) + var(--shadowRadius));
+}
+:host([slot="right"]) > .seg::before {
+  padding-left: calc(2 * var(--lineRadius) + var(--shadowRadius));
+}
+:host([slot="bottom"]) > .seg::before {
+  padding-top: calc(2 * var(--lineRadius) + var(--shadowRadius));
 }
 
 /* horizontal */
