@@ -148,11 +148,11 @@ template_box.innerHTML = `
 :host(:hover) {
   z-index: 5;
 }
-:host([slot="bottom"]), :host([slot="right"]) {
+:host([dir="bottom"]), :host([dir="right"]) {
   left: var(--x);
   top:  var(--y);
 }
-:host([slot="top"]), :host([slot="left"]) {
+:host([dir="top"]), :host([dir="left"]) {
   left: calc(var(--x) - var(--width));
   top:  calc(var(--y) - var(--height));
 }
@@ -215,47 +215,47 @@ ${dot_css}
   --clip-right: 0;
   --clip-bottom: 0;
 }
-:host([slot="bottom"]:not(:hover)) ::slotted([slot="left"]),
-:host([slot="bottom"]:not(:hover)) ::slotted([slot="right"]),
-:host([slot="right"]:not(:hover)) ::slotted([slot="left"]),
-:host([slot="left"]:not(:hover)) ::slotted([slot="right"]) {
+:host([dir="bottom"]:not(:hover)) ::slotted([dir="left"]),
+:host([dir="bottom"]:not(:hover)) ::slotted([dir="right"]),
+:host([dir="right"]:not(:hover)) ::slotted([dir="left"]),
+:host([dir="left"]:not(:hover)) ::slotted([dir="right"]) {
   --clip-top: 1;
 }
-:host([slot="right"]:not(:hover)) ::slotted([slot="top"]),
-:host([slot="right"]:not(:hover)) ::slotted([slot="bottom"]),
-:host([slot="bottom"]:not(:hover)) ::slotted([slot="top"]),
-:host([slot="top"]:not(:hover)) ::slotted([slot="bottom"]) {
+:host([dir="right"]:not(:hover)) ::slotted([dir="top"]),
+:host([dir="right"]:not(:hover)) ::slotted([dir="bottom"]),
+:host([dir="bottom"]:not(:hover)) ::slotted([dir="top"]),
+:host([dir="top"]:not(:hover)) ::slotted([dir="bottom"]) {
   --clip-left: 1;
 }
-:host([slot="left"]:not(:hover)) ::slotted([slot="top"]),
-:host([slot="left"]:not(:hover)) ::slotted([slot="bottom"]),
-:host([slot="bottom"]:not(:hover)) ::slotted([slot="top"]),
-:host([slot="top"]:not(:hover)) ::slotted([slot="bottom"]) {
+:host([dir="left"]:not(:hover)) ::slotted([dir="top"]),
+:host([dir="left"]:not(:hover)) ::slotted([dir="bottom"]),
+:host([dir="bottom"]:not(:hover)) ::slotted([dir="top"]),
+:host([dir="top"]:not(:hover)) ::slotted([dir="bottom"]) {
   --clip-right: 1;
 }
-:host([slot="top"]:not(:hover)) ::slotted([slot="left"]),
-:host([slot="top"]:not(:hover)) ::slotted([slot="right"]),
-:host([slot="right"]:not(:hover)) ::slotted([slot="left"]),
-:host([slot="left"]:not(:hover)) ::slotted([slot="right"]) {
+:host([dir="top"]:not(:hover)) ::slotted([dir="left"]),
+:host([dir="top"]:not(:hover)) ::slotted([dir="right"]),
+:host([dir="right"]:not(:hover)) ::slotted([dir="left"]),
+:host([dir="left"]:not(:hover)) ::slotted([dir="right"]) {
   --clip-bottom: 1;
 }
 
-:host([slot="top"]) .dot.end,
-:host([slot="left"]) .dot.end,
-:host([slot="right"]) .dot.start,
-:host([slot="bottom"]) .dot.start {
+:host([dir="top"]) .dot.end,
+:host([dir="left"]) .dot.end,
+:host([dir="right"]) .dot.start,
+:host([dir="bottom"]) .dot.start {
   cursor: pointer;
 }
-:host([slot="top"]) .dot.end::after,
-:host([slot="left"]) .dot.end::after,
-:host([slot="right"]) .dot.start::after,
-:host([slot="bottom"]) .dot.start::after {
+:host([dir="top"]) .dot.end::after,
+:host([dir="left"]) .dot.end::after,
+:host([dir="right"]) .dot.start::after,
+:host([dir="bottom"]) .dot.start::after {
   --dotVisible: 1;
 }
-:host([slot="top"]:hover) .dot.end::before,
-:host([slot="left"]:hover) .dot.end::before,
-:host([slot="right"]:hover) .dot.start::before,
-:host([slot="bottom"]:hover) .dot.start::before {
+:host([dir="top"]:hover) .dot.end::before,
+:host([dir="left"]:hover) .dot.end::before,
+:host([dir="right"]:hover) .dot.start::before,
+:host([dir="bottom"]:hover) .dot.start::before {
   --dotVisible: 1;
 }
 </style>
@@ -291,6 +291,9 @@ customElements.define("l7-box", class extends HTMLElement {
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
 
+  get dir() {
+    return this.getAttribute("dir");
+  }
   get rect() {
     let left = this.style.getPropertyValue("--left");
     let top = this.style.getPropertyValue("--top");
@@ -371,9 +374,9 @@ customElements.define("l7-box", class extends HTMLElement {
   ondragg(event) {
     let mode;
     if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
-      if ( (this.slot === "top" || this.slot === "left") && event.target.matches(".interior, .end") )
+      if ( (this.dir === "top" || this.dir === "left") && event.target.matches(".interior, .end") )
         return;
-      if ( (this.slot === "bottom" || this.slot === "right") && event.target.matches(".interior, .start") )
+      if ( (this.dir === "bottom" || this.dir === "right") && event.target.matches(".interior, .start") )
         return;
 
       mode = Array.from(event.target.classList);
@@ -385,11 +388,11 @@ customElements.define("l7-box", class extends HTMLElement {
       return;
     }
 
-    if ( !this.slot ) {
+    if ( !this.dir ) {
       mode = mode.filter(s => ["top", "left", "bottom", "right"].includes(s));
-    } else if ( this.slot === "top" || this.slot === "left" ) {
+    } else if ( this.dir === "top" || this.dir === "left" ) {
       mode = mode.filter(s => ["top", "left"].includes(s));
-    } else if ( this.slot === "bottom" || this.slot === "right" ) {
+    } else if ( this.dir === "bottom" || this.dir === "right" ) {
       mode = mode.filter(s => ["bottom", "right"].includes(s));
     }
 
@@ -685,10 +688,7 @@ ${dot_css}
 </style>
 
 <dragg-able class="dot"></dragg-able>
-<slot name="top"></slot>
-<slot name="left"></slot>
-<slot name="right"></slot>
-<slot name="bottom"></slot>
+<slot></slot>
 `;
 customElements.define("l7-port", class extends HTMLElement {
   constructor() {
@@ -830,40 +830,40 @@ ${dot_css}
 }
 
 
-:host([slot="top"]) > .seg::before {
+:host([dir="top"]) > .seg::before {
   padding-bottom: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([slot="left"]) > .seg::before {
+:host([dir="left"]) > .seg::before {
   padding-right: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([slot="right"]) > .seg::before {
+:host([dir="right"]) > .seg::before {
   padding-left: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([slot="bottom"]) > .seg::before {
+:host([dir="bottom"]) > .seg::before {
   padding-top: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 
 /* horizontal */
-:host([slot="top"]) .seg.odd,
-:host([slot="left"]) .seg.even,
-:host([slot="right"]) .seg.even,
-:host([slot="bottom"]) .seg.odd {
+:host([dir="top"]) .seg.odd,
+:host([dir="left"]) .seg.even,
+:host([dir="right"]) .seg.even,
+:host([dir="bottom"]) .seg.odd {
   cursor: ns-resize;
 }
-:host([slot="top"]) .seg.odd::before,    :host([slot="top"]) .seg.odd::after,
-:host([slot="left"]) .seg.even::before,  :host([slot="left"]) .seg.even::after,
-:host([slot="right"]) .seg.even::before, :host([slot="right"]) .seg.even::after,
-:host([slot="bottom"]) .seg.odd::before, :host([slot="bottom"]) .seg.odd::after {
+:host([dir="top"]) .seg.odd::before,    :host([dir="top"]) .seg.odd::after,
+:host([dir="left"]) .seg.even::before,  :host([dir="left"]) .seg.even::after,
+:host([dir="right"]) .seg.even::before, :host([dir="right"]) .seg.even::after,
+:host([dir="bottom"]) .seg.odd::before, :host([dir="bottom"]) .seg.odd::after {
   box-sizing: border-box;
   height: calc(2 * var(--r));
   width: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
   left: calc(var(--x-) + min(0px, var(--l)) - var(--r));
   top: calc(var(--y-) - var(--r));
 }
-:host([slot="top"]) .seg.odd:empty::before,    :host([slot="top"]) .seg.odd:empty::after,
-:host([slot="left"]) .seg.even:empty::before,  :host([slot="left"]) .seg.even:empty::after,
-:host([slot="right"]) .seg.even:empty::before, :host([slot="right"]) .seg.even:empty::after,
-:host([slot="bottom"]) .seg.odd:empty::before, :host([slot="bottom"]) .seg.odd:empty::after {
+:host([dir="top"]) .seg.odd:empty::before,    :host([dir="top"]) .seg.odd:empty::after,
+:host([dir="left"]) .seg.even:empty::before,  :host([dir="left"]) .seg.even:empty::after,
+:host([dir="right"]) .seg.even:empty::before, :host([dir="right"]) .seg.even:empty::after,
+:host([dir="bottom"]) .seg.odd:empty::before, :host([dir="bottom"]) .seg.odd:empty::after {
   box-sizing: border-box;
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   height: calc(2 * var(--r));
@@ -874,30 +874,30 @@ ${dot_css}
   background: content-box var(--lineColor);
   pointer-events: none;
 }
-:host([slot="top"]) .seg.odd:empty::before,
-:host([slot="left"]) .seg.even:empty::before,
-:host([slot="right"]) .seg.even:empty::before,
-:host([slot="bottom"]) .seg.odd:empty::before {
+:host([dir="top"]) .seg.odd:empty::before,
+:host([dir="left"]) .seg.even:empty::before,
+:host([dir="right"]) .seg.even:empty::before,
+:host([dir="bottom"]) .seg.odd:empty::before {
   width: calc(max(0px, var(--l)));
   left: var(--x-);
   mask-image: linear-gradient(to right, black, transparent);
 }
-:host([slot="top"]) .seg.odd:empty::after,
-:host([slot="left"]) .seg.even:empty::after,
-:host([slot="right"]) .seg.even:empty::after,
-:host([slot="bottom"]) .seg.odd:empty::after {
+:host([dir="top"]) .seg.odd:empty::after,
+:host([dir="left"]) .seg.even:empty::after,
+:host([dir="right"]) .seg.even:empty::after,
+:host([dir="bottom"]) .seg.odd:empty::after {
   width: calc(max(0px, -1 * var(--l)));
   left: calc(var(--x-) + var(--l));
   mask-image: linear-gradient(to left, black, transparent);
 }
-:host([type="dashed"][slot="top"]) .seg.odd::after,
-:host([type="dashed"][slot="left"]) .seg.even::after,
-:host([type="dashed"][slot="right"]) .seg.even::after,
-:host([type="dashed"][slot="bottom"]) .seg.odd::after,
-:host([type="dashed"][slot="top"]) .seg.odd:empty::before,
-:host([type="dashed"][slot="left"]) .seg.even:empty::before,
-:host([type="dashed"][slot="right"]) .seg.even:empty::before,
-:host([type="dashed"][slot="bottom"]) .seg.odd:empty::before {
+:host([type="dashed"][dir="top"]) .seg.odd::after,
+:host([type="dashed"][dir="left"]) .seg.even::after,
+:host([type="dashed"][dir="right"]) .seg.even::after,
+:host([type="dashed"][dir="bottom"]) .seg.odd::after,
+:host([type="dashed"][dir="top"]) .seg.odd:empty::before,
+:host([type="dashed"][dir="left"]) .seg.even:empty::before,
+:host([type="dashed"][dir="right"]) .seg.even:empty::before,
+:host([type="dashed"][dir="bottom"]) .seg.odd:empty::before {
   background-color: initial;
   background-image: linear-gradient(to right, var(--lineColor) 0, var(--DASHLENGTH1),
                                     var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
@@ -908,26 +908,26 @@ ${dot_css}
 }
 
 /* vertical */
-:host([slot="top"]) .seg.even,
-:host([slot="left"]) .seg.odd,
-:host([slot="right"]) .seg.odd,
-:host([slot="bottom"]) .seg.even {
+:host([dir="top"]) .seg.even,
+:host([dir="left"]) .seg.odd,
+:host([dir="right"]) .seg.odd,
+:host([dir="bottom"]) .seg.even {
   cursor: ew-resize;
 }
-:host([slot="top"]) .seg.even::before,    :host([slot="top"]) .seg.even::after,
-:host([slot="left"]) .seg.odd::before,    :host([slot="left"]) .seg.odd::after,
-:host([slot="right"]) .seg.odd::before,   :host([slot="right"]) .seg.odd::after,
-:host([slot="bottom"]) .seg.even::before, :host([slot="bottom"]) .seg.even::after {
+:host([dir="top"]) .seg.even::before,    :host([dir="top"]) .seg.even::after,
+:host([dir="left"]) .seg.odd::before,    :host([dir="left"]) .seg.odd::after,
+:host([dir="right"]) .seg.odd::before,   :host([dir="right"]) .seg.odd::after,
+:host([dir="bottom"]) .seg.even::before, :host([dir="bottom"]) .seg.even::after {
   box-sizing: border-box;
   width: calc(2 * var(--r));
   height: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
   top: calc(var(--y-) + min(0px, var(--l)) - var(--r));
   left: calc(var(--x-) - var(--r));
 }
-:host([slot="top"]) .seg.even:empty::before,    :host([slot="top"]) .seg.even:empty::after,
-:host([slot="left"]) .seg.odd:empty::before,    :host([slot="left"]) .seg.odd:empty::after,
-:host([slot="right"]) .seg.odd:empty::before,   :host([slot="right"]) .seg.odd:empty::after,
-:host([slot="bottom"]) .seg.even:empty::before, :host([slot="bottom"]) .seg.even:empty::after {
+:host([dir="top"]) .seg.even:empty::before,    :host([dir="top"]) .seg.even:empty::after,
+:host([dir="left"]) .seg.odd:empty::before,    :host([dir="left"]) .seg.odd:empty::after,
+:host([dir="right"]) .seg.odd:empty::before,   :host([dir="right"]) .seg.odd:empty::after,
+:host([dir="bottom"]) .seg.even:empty::before, :host([dir="bottom"]) .seg.even:empty::after {
   box-sizing: border-box;
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   width: calc(2 * var(--r));
@@ -938,30 +938,30 @@ ${dot_css}
   background: content-box var(--lineColor);
   pointer-events: none;
 }
-:host([slot="top"]) .seg.even:empty::before,
-:host([slot="left"]) .seg.odd:empty::before,
-:host([slot="right"]) .seg.odd:empty::before,
-:host([slot="bottom"]) .seg.even:empty::before {
+:host([dir="top"]) .seg.even:empty::before,
+:host([dir="left"]) .seg.odd:empty::before,
+:host([dir="right"]) .seg.odd:empty::before,
+:host([dir="bottom"]) .seg.even:empty::before {
   height: calc(max(0px, var(--l)));
   top: var(--y-);
   mask-image: linear-gradient(to bottom, black, transparent);
 }
-:host([slot="top"]) .seg.even:empty::after,
-:host([slot="left"]) .seg.odd:empty::after,
-:host([slot="right"]) .seg.odd:empty::after,
-:host([slot="bottom"]) .seg.even:empty::after {
+:host([dir="top"]) .seg.even:empty::after,
+:host([dir="left"]) .seg.odd:empty::after,
+:host([dir="right"]) .seg.odd:empty::after,
+:host([dir="bottom"]) .seg.even:empty::after {
   height: calc(max(0px, -1 * var(--l)));
   top: calc(var(--y-) + var(--l));
   mask-image: linear-gradient(to top, black, transparent);
 }
-:host([type="dashed"][slot="top"]) .seg.even::after,
-:host([type="dashed"][slot="left"]) .seg.odd::after,
-:host([type="dashed"][slot="right"]) .seg.odd::after,
-:host([type="dashed"][slot="bottom"]) .seg.even::after,
-:host([type="dashed"][slot="top"]) .seg.even:empty::before,
-:host([type="dashed"][slot="left"]) .seg.odd:empty::before,
-:host([type="dashed"][slot="right"]) .seg.odd:empty::before,
-:host([type="dashed"][slot="bottom"]) .seg.even:empty::before {
+:host([type="dashed"][dir="top"]) .seg.even::after,
+:host([type="dashed"][dir="left"]) .seg.odd::after,
+:host([type="dashed"][dir="right"]) .seg.odd::after,
+:host([type="dashed"][dir="bottom"]) .seg.even::after,
+:host([type="dashed"][dir="top"]) .seg.even:empty::before,
+:host([type="dashed"][dir="left"]) .seg.odd:empty::before,
+:host([type="dashed"][dir="right"]) .seg.odd:empty::before,
+:host([type="dashed"][dir="bottom"]) .seg.even:empty::before {
   background-color: initial;
   background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--DASHLENGTH1),
                                     var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
@@ -972,32 +972,32 @@ ${dot_css}
 }
 
 /* position calculation */
-:host([slot="top"]) .seg.odd,
-:host([slot="left"]) .seg.even,
-:host([slot="right"]) .seg.even,
-:host([slot="bottom"]) .seg.odd {
+:host([dir="top"]) .seg.odd,
+:host([dir="left"]) .seg.even,
+:host([dir="right"]) .seg.even,
+:host([dir="bottom"]) .seg.odd {
   --\\%: calc(var(--deltaX) / 100);
   --l: var(--length);
   --x: calc(var(--x-) + var(--l));
   --y-: var(--y);
 }
-:host([slot="left"]) > .seg.even,
-:host([slot="right"]) > .seg.even {
+:host([dir="left"]) > .seg.even,
+:host([dir="right"]) > .seg.even {
   --x-: 0px;
   --y: 0px;
 }
 
-:host([slot="top"]) .seg.even,
-:host([slot="left"]) .seg.odd,
-:host([slot="right"]) .seg.odd,
-:host([slot="bottom"]) .seg.even {
+:host([dir="top"]) .seg.even,
+:host([dir="left"]) .seg.odd,
+:host([dir="right"]) .seg.odd,
+:host([dir="bottom"]) .seg.even {
   --\\%: calc(var(--deltaY) / 100);
   --l: var(--length);
   --y: calc(var(--y-) + var(--l));
   --x-: var(--x);
 }
-:host([slot="top"]) > .seg.even,
-:host([slot="bottom"]) > .seg.even {
+:host([dir="top"]) > .seg.even,
+:host([dir="bottom"]) > .seg.even {
   --y-: 0px;
   --x: 0px;
 }
@@ -1019,7 +1019,7 @@ customElements.define("l7-wire", class extends HTMLElement {
     if ( old !== value ) {
       if ( name === "style" ) {
         let path = this.getComputedPath();
-        if ( this.slot === "top" || this.slot === "left" )
+        if ( this.dir === "top" || this.dir === "left" )
           path = path.reverse().map(p => `-1 * (${p})`);
 
         let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
@@ -1051,23 +1051,26 @@ customElements.define("l7-wire", class extends HTMLElement {
     requestAnimationFrame(() => this.updateDelta());
   }
 
+  get dir() {
+    return this.getAttribute("dir");
+  }
   get start() {
     let start;
-    if ( this.slot === "bottom" || this.slot === "right" )
+    if ( this.dir === "bottom" || this.dir === "right" )
       start = this;
-    if ( this.slot === "top" || this.slot === "left" )
+    if ( this.dir === "top" || this.dir === "left" )
       start = document.getElementById(this.getAttribute("from"));
-    if ( !start || start.slot !== "bottom" && start.slot !== "right" )
+    if ( !start || start.dir !== "bottom" && start.dir !== "right" )
       return;
     return start;
   }
   get end() {
     let end;
-    if ( this.slot === "bottom" || this.slot === "right" )
+    if ( this.dir === "bottom" || this.dir === "right" )
       end = document.getElementById(this.getAttribute("to"));
-    if ( this.slot === "top" || this.slot === "left" )
+    if ( this.dir === "top" || this.dir === "left" )
       end = this;
-    if ( !end || end.slot !== "top" && end.slot !== "left" )
+    if ( !end || end.dir !== "top" && end.dir !== "left" )
       return;
     return end;
   }
@@ -1080,10 +1083,10 @@ customElements.define("l7-wire", class extends HTMLElement {
     let rect2 = end.getBoundingClientRect();
     let deltaX = rect2.left - rect1.left;
     let deltaY = rect2.top - rect1.top;
-    if ( start.slot === "bottom" ) deltaY -= minHeadLength;
-    if ( start.slot === "right" )  deltaX -= minHeadLength;
-    if ( end.slot === "top" )      deltaY -= minHeadLength;
-    if ( end.slot === "left" )     deltaX -= minHeadLength;
+    if ( start.dir === "bottom" ) deltaY -= minHeadLength;
+    if ( start.dir === "right" )  deltaX -= minHeadLength;
+    if ( end.dir === "top" )      deltaY -= minHeadLength;
+    if ( end.dir === "left" )     deltaX -= minHeadLength;
 
     start.setDelta(deltaX, deltaY);
     end.setDelta(deltaX, deltaY);
@@ -1136,7 +1139,7 @@ customElements.define("l7-wire", class extends HTMLElement {
     if ( !start || !end )
       return "";
 
-    switch ( `${start.slot} ${end.slot}` ) {
+    switch ( `${start.dir} ${end.dir}` ) {
       case "bottom top":
       case "right left":
         return "max(0px, 50%) 50% min(0px, 100%) 50% max(0px, 50%)";
