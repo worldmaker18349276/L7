@@ -9,16 +9,16 @@
   resize: both;
   background: pink;
 
-  --scale: 2;
-  --lineRadius      : calc(var(--scale) * 1px);
-  --dotRadius       : calc(var(--scale) * 2px);
-  --shadowRadius    : calc(var(--scale) * 1px);
-  --hoverRadius     : calc(var(--scale) * 3px);
-  --dashLength1     : calc(var(--scale) * 7px);
-  --dashLength2     : calc(var(--scale) * 10px);
-  --shadowColor     : white;
-  --strokeColor     : DimGray;
-  --hoverColor      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */
-  --focusColor      : DarkGray;
-  --bgColor         : rgba(245, 245, 245, 0.8); /* WhiteSmoke */
+  --SCALE: 2;
+  --LINERADIUS      : calc(var(--SCALE) * 1px);
+  --DOTRADIUS       : calc(var(--SCALE) * 2px);
+  --SHADOWRADIUS    : calc(var(--SCALE) * 1px);
+  --HOVERRADIUS     : calc(var(--SCALE) * 3px);
+  --DASHLENGTH1     : calc(var(--SCALE) * 7px);
+  --DASHLENGTH2     : calc(var(--SCALE) * 10px);
+  --SHADOWCOLOR     : white;
+  --STROKECOLOR     : DimGray;
+  --HOVERCOLOR      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */
+  --FOCUSCOLOR      : DarkGray;
+  --BGCOLOR         : rgba(245, 245, 245, 0.8); /* WhiteSmoke */
 }

@@ -116,29 +116,26 @@ const dot_css = `
   bottom: var(---r);
 }
 .dot::before {
-  ---r: calc(-1 * (var(--dotRadius) + var(--shadowRadius)));
-  background: content-box var(--shadowColor);
+  ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
+  background: content-box var(--SHADOWCOLOR, transparent);
   pointer-events: none;
   z-index: 1;
 }
 .dot::after {
   box-sizing: border-box;
-  ---r: calc(-1 * var(--dotRadius));
-  border: calc(var(--dotRadius) - var(--lineRadius)) solid var(--frameColor);
-  background: content-box var(--centerColor, var(--frameColor));
+  ---r: calc(-1 * var(--DOTRADIUS));
+  border: calc(var(--DOTRADIUS) - var(--LINERADIUS)) solid var(--frameColor, transparent);
+  background: content-box var(--centerColor, var(--frameColor, transparent));
   pointer-events: none;
   z-index: 2;
 }
 .dot::part(handle) {
-  ---r: calc(-1 * var(--hoverRadius));
+  ---r: calc(-1 * var(--HOVERRADIUS));
   pointer-events: auto;
   z-index: 3;
 
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
-}
-.dot:hover {
-  --frameColor: var(--focusColor);
 }
 `;
 
@@ -152,7 +149,7 @@ template_box.innerHTML = `
   width:  var(--width);
   height: var(--height);
 
-  background: var(--bgColor);
+  background: var(--BGCOLOR);
   pointer-events: none;
   z-index: 4;
 }
@@ -168,7 +165,7 @@ template_box.innerHTML = `
   top:  calc(var(--y) - var(--height));
 }
 
-.handle.interior {
+.interior {
   pointer-events: auto;
   position: absolute;
   z-index: 3;
@@ -177,6 +174,9 @@ template_box.innerHTML = `
   /* outline-offset: -1px; */
 }
 ${dot_css}
+.dot::before, .dot::after {
+  display: none;
+}
 .top {
   top: 0px;
 }
@@ -189,28 +189,31 @@ ${dot_css}
 .bottom {
   bottom: 0px;
 }
-.handle.interior {
+.interior {
   cursor: move;
 }
-.handle.dot.top.left {
+.dot.top.left {
   cursor: nw-resize;
 }
-.handle.dot.top.right {
+.dot.top.right {
   cursor: ne-resize;
 }
-.handle.dot.bottom.left {
+.dot.bottom.left {
   cursor: sw-resize;
 }
-.handle.dot.bottom.right {
+.dot.bottom.right {
   cursor: se-resize;
 }
 
-::slotted([slot]) {
+::slotted(*) {
   --centerColor: initial;
-  --frameColor: var(--strokeColor);
+  --frameColor: var(--STROKECOLOR);
 }
-:host(:hover) ::slotted([slot]) {
-  --frameColor: var(--hoverColor);
+:host(:hover) ::slotted(*) {
+  --frameColor: var(--HOVERCOLOR);
+}
+.dot:hover {
+  --frameColor: var(--FOCUSCOLOR);
 }
 
 ::slotted(*) {
@@ -244,10 +247,6 @@ ${dot_css}
   --clip-bottom: 1;
 }
 
-.dot::before,
-.dot::after {
-  display: none;
-}
 :host([slot="top"]) .dot.end,
 :host([slot="left"]) .dot.end,
 :host([slot="right"]) .dot.start,
@@ -434,7 +433,7 @@ const template_border = document.createElement("template");
 template_border.innerHTML = `
 <style>
 :host {
-  --shift: calc(min(100%, 2 * var(--order, 0) * var(--hoverRadius)));
+  --shift: calc(min(100%, 2 * var(--order, 0) * var(--HOVERRADIUS)));
 
   position: absolute;
   width: 100%;
@@ -460,25 +459,25 @@ template_border.innerHTML = `
 }
 .line::before {
   box-sizing: border-box;
-  --r: calc(var(--lineRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
+  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
+  background: content-box var(--SHADOWCOLOR);
   pointer-events: none;
   z-index: 1;
 
-  --c: calc(2 * var(--lineRadius) + var(--shadowRadius));
+  --c: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
   padding-top:    calc(var(--clip-top, 0) * var(--c));
   padding-left:   calc(var(--clip-left, 0) * var(--c));
   padding-right:  calc(var(--clip-right, 0) * var(--c));
   padding-bottom: calc(var(--clip-bottom, 0) * var(--c));
 }
 .line::after {
-  --r: var(--lineRadius);
+  --r: var(--LINERADIUS);
   background: content-box var(--frameColor);
   pointer-events: none;
   z-index: 2;
 }
 .line::part(handle) {
-  --r: var(--hoverRadius);
+  --r: var(--HOVERRADIUS);
   pointer-events: auto;
   z-index: 3;
 
@@ -486,7 +485,7 @@ template_border.innerHTML = `
   /* outline-offset: -1px; */
 }
 .line:hover, .line:hover ~ ::slotted(*) {
-  --frameColor: var(--focusColor);
+  --frameColor: var(--FOCUSCOLOR);
 }
 
 .line::part(handle) {
@@ -684,10 +683,10 @@ ${dot_css}
   top: var(--y);
 }
 :host([type="hollow"]) {
-  --centerColor: white;
+  --centerColor: var(--SHADOWCOLOR);
 }
-.dot:hover ~ ::slotted(*) {
-  --frameColor: var(--focusColor);
+.dot:hover, .dot:hover ~ ::slotted(*) {
+  --frameColor: var(--FOCUSCOLOR);
 }
 :host([type="hidden"]) .dot::before,
 :host([type="hidden"]) .dot::after {
@@ -796,20 +795,20 @@ template_wire.innerHTML = `
   height: 0px;
 
   z-index: 4;
-  --lineColor: var(--strokeColor);
+  --lineColor: var(--STROKECOLOR);
 }
 :host(:hover) {
   z-index: 5;
-  --frameColor: var(--focusColor);
-  --lineColor: var(--focusColor);
+  --frameColor: var(--FOCUSCOLOR);
+  --lineColor: var(--FOCUSCOLOR);
 }
 
 ${dot_css}
-:host([type="dashed"]) .dot::after,
+.dot::after,
 .dot::before {
   display: none;
 }
-:host(:not([type="dashed"]):hover) .dot::before {
+:host(:hover) .dot::before {
   display: block;
 }
 
@@ -824,8 +823,8 @@ ${dot_css}
   content: "";
   display: block;
   position: absolute;
-  --r: calc(var(--lineRadius) + var(--shadowRadius));
-  background: content-box var(--shadowColor);
+  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
+  background: content-box var(--SHADOWCOLOR);
   pointer-events: auto;
   z-index: inherit;
 }
@@ -833,8 +832,8 @@ ${dot_css}
   content: "";
   display: block;
   position: absolute;
-  --r: var(--hoverRadius);
-  border: calc(var(--r) - var(--lineRadius)) solid transparent;
+  --r: var(--HOVERRADIUS);
+  border: calc(var(--r) - var(--LINERADIUS)) solid transparent;
   background: content-box var(--lineColor);
   pointer-events: auto;
   z-index: inherit;
@@ -846,16 +845,16 @@ ${dot_css}
 
 
 :host([slot="top"]) > .seg::before {
-  padding-bottom: calc(2 * var(--lineRadius) + var(--shadowRadius));
+  padding-bottom: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 :host([slot="left"]) > .seg::before {
-  padding-right: calc(2 * var(--lineRadius) + var(--shadowRadius));
+  padding-right: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 :host([slot="right"]) > .seg::before {
-  padding-left: calc(2 * var(--lineRadius) + var(--shadowRadius));
+  padding-left: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 :host([slot="bottom"]) > .seg::before {
-  padding-top: calc(2 * var(--lineRadius) + var(--shadowRadius));
+  padding-top: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 
 /* horizontal */
@@ -880,10 +879,10 @@ ${dot_css}
 :host([slot="right"]) .seg.even:empty::before, :host([slot="right"]) .seg.even:empty::after,
 :host([slot="bottom"]) .seg.odd:empty::before, :host([slot="bottom"]) .seg.odd:empty::after {
   box-sizing: border-box;
-  --r: calc(var(--lineRadius) + var(--shadowRadius));
+  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   height: calc(2 * var(--r));
   top: calc(var(--y-) - var(--r));
-  border: var(--shadowRadius) solid var(--shadowColor);
+  border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
   border-left-width: 0px;
   border-right-width: 0px;
   background: content-box var(--lineColor);
@@ -913,10 +912,10 @@ ${dot_css}
 :host([type="dashed"][slot="left"]) .seg.even:empty::before,
 :host([type="dashed"][slot="right"]) .seg.even:empty::before,
 :host([type="dashed"][slot="bottom"]) .seg.odd:empty::before {
-  background-color: unset;
-  background-image: linear-gradient(to right, var(--lineColor) 0, var(--dashLength1),
-                                    var(--shadowColor) 0, var(--shadowColor) var(--dashLength2));
-  background-size: var(--dashLength2) auto;
+  background-color: initial;
+  background-image: linear-gradient(to right, var(--lineColor) 0, var(--DASHLENGTH1),
+                                    var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
+  background-size: var(--DASHLENGTH2) auto;
   background-origin: content-box;
   background-clip: content-box;
   background-repeat: repeat-x;
@@ -944,10 +943,10 @@ ${dot_css}
 :host([slot="right"]) .seg.odd:empty::before,   :host([slot="right"]) .seg.odd:empty::after,
 :host([slot="bottom"]) .seg.even:empty::before, :host([slot="bottom"]) .seg.even:empty::after {
   box-sizing: border-box;
-  --r: calc(var(--lineRadius) + var(--shadowRadius));
+  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   width: calc(2 * var(--r));
   left: calc(var(--x-) - var(--r));
-  border: var(--shadowRadius) solid var(--shadowColor);
+  border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
   border-top-width: 0px;
   border-bottom-width: 0px;
   background: content-box var(--lineColor);
@@ -977,10 +976,10 @@ ${dot_css}
 :host([type="dashed"][slot="left"]) .seg.odd:empty::before,
 :host([type="dashed"][slot="right"]) .seg.odd:empty::before,
 :host([type="dashed"][slot="bottom"]) .seg.even:empty::before {
-  background-color: unset;
-  background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--dashLength1),
-                                    var(--shadowColor) 0, var(--shadowColor) var(--dashLength2));
-  background-size: auto var(--dashLength2);
+  background-color: initial;
+  background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--DASHLENGTH1),
+                                    var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
+  background-size: auto var(--DASHLENGTH2);
   background-origin: content-box;
   background-clip: content-box;
   background-repeat: repeat-y;
