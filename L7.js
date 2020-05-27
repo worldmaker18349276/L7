@@ -5,13 +5,9 @@ function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
 
-const template_draggable = document.createElement("template");
-template_draggable.innerHTML = `<div part="handle"></div><slot></slot>`;
 customElements.define("dragg-able", class extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({mode: "open"});
-    this.shadowRoot.appendChild(template_draggable.content.cloneNode(true));
 
     this._handlers = new Set();
     this.onpointerdown = this.onpointerdown.bind(this);
@@ -105,7 +101,7 @@ const dot_css = `
   cursor: pointer;
   position: absolute;
 }
-.dot::before, .dot::after, .dot::part(handle) {
+.dot::before, .dot::after {
   content: "";
   display: block;
   position: absolute;
@@ -119,23 +115,19 @@ const dot_css = `
   ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
   background: content-box var(--SHADOWCOLOR, transparent);
   pointer-events: none;
+  opacity: var(--dotVisible, 1);
   z-index: 1;
 }
 .dot::after {
   box-sizing: border-box;
-  ---r: calc(-1 * var(--DOTRADIUS));
-  border: calc(var(--DOTRADIUS) - var(--LINERADIUS)) solid var(--frameColor, transparent);
-  background: content-box var(--centerColor, var(--frameColor, transparent));
-  pointer-events: none;
-  z-index: 2;
-}
-.dot::part(handle) {
   ---r: calc(-1 * var(--HOVERRADIUS));
+  border: calc(var(--HOVERRADIUS) - var(--DOTRADIUS)) solid transparent;
+  background: content-box var(--frameColor, transparent);
+  outline: var(--LINERADIUS) solid var(--dotFillColor, var(--frameColor, transparent));
+  outline-offset: var(---r);
+  opacity: var(--dotVisible, 1);
   pointer-events: auto;
   z-index: 3;
-
-  /* outline: 1px dashed blue; */
-  /* outline-offset: -1px; */
 }
 `;
 
@@ -175,7 +167,7 @@ template_box.innerHTML = `
 }
 ${dot_css}
 .dot::before, .dot::after {
-  display: none;
+  --dotVisible: 0;
 }
 .top {
   top: 0px;
@@ -206,7 +198,8 @@ ${dot_css}
 }
 
 ::slotted(*) {
-  --centerColor: initial;
+  --dotVisible: initial;
+  --dotFillColor: initial;
   --frameColor: var(--STROKECOLOR);
 }
 :host(:hover) ::slotted(*) {
@@ -257,13 +250,13 @@ ${dot_css}
 :host([slot="left"]) .dot.end::after,
 :host([slot="right"]) .dot.start::after,
 :host([slot="bottom"]) .dot.start::after {
-  display: block;
+  --dotVisible: 1;
 }
 :host([slot="top"]:hover) .dot.end::before,
 :host([slot="left"]:hover) .dot.end::before,
 :host([slot="right"]:hover) .dot.start::before,
 :host([slot="bottom"]:hover) .dot.start::before {
-  display: block;
+  --dotVisible: 1;
 }
 </style>
 
@@ -445,7 +438,7 @@ template_border.innerHTML = `
   z-index: 5;
 }
 
-.center, .line::before, .line::after, .line::part(handle) {
+.center, .line::before, .line::after, .line .handle {
   content: "";
   display: block;
   position: absolute;
@@ -476,7 +469,7 @@ template_border.innerHTML = `
   pointer-events: none;
   z-index: 2;
 }
-.line::part(handle) {
+.line .handle {
   --r: var(--HOVERRADIUS);
   pointer-events: auto;
   z-index: 3;
@@ -488,13 +481,13 @@ template_border.innerHTML = `
   --frameColor: var(--FOCUSCOLOR);
 }
 
-.line::part(handle) {
+.line .handle {
   ---r: var(--r);
 }
 :host([slot="top"]) .center,
 :host([slot="top"]) .line::before,
 :host([slot="top"]) .line::after,
-:host([slot="top"]) .line::part(handle) {
+:host([slot="top"]) .line .handle {
   left:   var(---r);
   right:  var(---r);
   top:    var(--s);
@@ -503,7 +496,7 @@ template_border.innerHTML = `
 :host([slot="bottom"]) .center,
 :host([slot="bottom"]) .line::before,
 :host([slot="bottom"]) .line::after,
-:host([slot="bottom"]) .line::part(handle) {
+:host([slot="bottom"]) .line .handle {
   left:   var(---r);
   right:  var(---r);
   bottom: var(--s);
@@ -512,7 +505,7 @@ template_border.innerHTML = `
 :host([slot="left"]) .center,
 :host([slot="left"]) .line::before,
 :host([slot="left"]) .line::after,
-:host([slot="left"]) .line::part(handle) {
+:host([slot="left"]) .line .handle {
   top:    var(---r);
   bottom: var(---r);
   left:   var(--s);
@@ -521,7 +514,7 @@ template_border.innerHTML = `
 :host([slot="right"]) .center,
 :host([slot="right"]) .line::before,
 :host([slot="right"]) .line::after,
-:host([slot="right"]) .line::part(handle) {
+:host([slot="right"]) .line .handle {
   top:    var(---r);
   bottom: var(---r);
   right:  var(--s);
@@ -559,7 +552,7 @@ template_border.innerHTML = `
 </style>
 
 <div class="center"></div>
-<dragg-able class="line"></dragg-able>
+<dragg-able class="line"><div class="handle"></div></dragg-able>
 <slot></slot>
 `;
 customElements.define("l7-border", class extends HTMLElement {
@@ -677,20 +670,17 @@ template_port.innerHTML = `
 
 ${dot_css}
 .dot {
-  position: absolute;
-
   left: var(--x);
   top: var(--y);
 }
 :host([type="hollow"]) {
-  --centerColor: var(--SHADOWCOLOR);
+  --dotFillColor: var(--SHADOWCOLOR);
 }
 .dot:hover, .dot:hover ~ ::slotted(*) {
   --frameColor: var(--FOCUSCOLOR);
 }
-:host([type="hidden"]) .dot::before,
-:host([type="hidden"]) .dot::after {
-  display: none;
+:host([type="hidden"]) {
+  --dotVisible: 0;
 }
 </style>
 
@@ -804,12 +794,8 @@ template_wire.innerHTML = `
 }
 
 ${dot_css}
-.dot::after,
-.dot::before {
-  display: none;
-}
-:host(:hover) .dot::before {
-  display: block;
+:host(:not(:hover)) .dot::before {
+  --dotVisible: 0;
 }
 
 .seg {
