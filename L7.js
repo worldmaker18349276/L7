@@ -122,8 +122,10 @@ const dot_css = `
   z-index: 1;
 }
 .dot::after {
+  box-sizing: border-box;
   ---r: calc(-1 * var(--dotRadius));
-  background: content-box var(--frameColor);
+  border: calc(var(--dotRadius) - var(--lineRadius)) solid var(--frameColor);
+  background: content-box var(--centerColor, var(--frameColor));
   pointer-events: none;
   z-index: 2;
 }
@@ -204,6 +206,7 @@ ${dot_css}
 }
 
 ::slotted([slot]) {
+  --centerColor: initial;
   --frameColor: var(--strokeColor);
 }
 :host(:hover) ::slotted([slot]) {
@@ -679,6 +682,9 @@ ${dot_css}
 
   left: var(--x);
   top: var(--y);
+}
+:host([type="hollow"]) {
+  --centerColor: white;
 }
 .dot:hover ~ ::slotted(*) {
   --frameColor: var(--focusColor);
