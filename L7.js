@@ -1,6 +1,6 @@
 "use strict";
 
-const minHeadLength = 10;
+const MINHEADLENGTH = 10;
 function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
@@ -1046,7 +1046,7 @@ customElements.define("l7-wire", class extends HTMLElement {
     if ( old !== value ) {
       if ( name === "style" ) {
         let path = this.getComputedPath();
-        if ( this.dir === "top" || this.dir === "left" )
+        if ( this.hasAttribute("from") )
           path = path.reverse().map(p => `-1 * (${p})`);
 
         let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
@@ -1082,24 +1082,16 @@ customElements.define("l7-wire", class extends HTMLElement {
     return this.getAttribute("dir");
   }
   get start() {
-    let start;
-    if ( this.dir === "bottom" || this.dir === "right" )
-      start = this;
-    if ( this.dir === "top" || this.dir === "left" )
-      start = document.getElementById(this.getAttribute("from"));
-    if ( !start || start.dir !== "bottom" && start.dir !== "right" )
-      return;
-    return start;
+    if ( this.hasAttribute("from") )
+      return document.getElementById(this.getAttribute("from"));
+    else
+      return this;
   }
   get end() {
-    let end;
-    if ( this.dir === "bottom" || this.dir === "right" )
-      end = document.getElementById(this.getAttribute("to"));
-    if ( this.dir === "top" || this.dir === "left" )
-      end = this;
-    if ( !end || end.dir !== "top" && end.dir !== "left" )
-      return;
-    return end;
+    if ( this.hasAttribute("to") )
+      return document.getElementById(this.getAttribute("to"));
+    else
+      return this;
   }
   updateDelta() {
     let start = this.start, end = this.end;
@@ -1110,10 +1102,10 @@ customElements.define("l7-wire", class extends HTMLElement {
     let rect2 = end.getBoundingClientRect();
     let deltaX = rect2.left - rect1.left;
     let deltaY = rect2.top - rect1.top;
-    if ( start.dir === "bottom" ) deltaY -= minHeadLength;
-    if ( start.dir === "right" )  deltaX -= minHeadLength;
-    if ( end.dir === "top" )      deltaY -= minHeadLength;
-    if ( end.dir === "left" )     deltaX -= minHeadLength;
+    if ( start.dir === "bottom" ) deltaY -= MINHEADLENGTH;
+    if ( start.dir === "right" )  deltaX -= MINHEADLENGTH;
+    if ( end.dir === "top" )      deltaY -= MINHEADLENGTH;
+    if ( end.dir === "left" )     deltaX -= MINHEADLENGTH;
 
     start.setDelta(deltaX, deltaY);
     end.setDelta(deltaX, deltaY);
@@ -1155,9 +1147,9 @@ customElements.define("l7-wire", class extends HTMLElement {
 
     // initial/final head length
     if ( path[0] )
-      path[0] = `${path[0]} + ${minHeadLength}px`;
+      path[0] = `${path[0]} + ${MINHEADLENGTH}px`;
     if ( path[path.length-1] )
-      path[path.length-1] = `${path[path.length-1]} + ${minHeadLength}px`;
+      path[path.length-1] = `${path[path.length-1]} + ${MINHEADLENGTH}px`;
 
     return path;
   }
@@ -1167,13 +1159,51 @@ customElements.define("l7-wire", class extends HTMLElement {
       return "";
 
     switch ( `${start.dir} ${end.dir}` ) {
+      // │ ┌─┐  ───┐
+      // └─┘ │   ┌─┘
+      //         └───
       case "bottom top":
       case "right left":
         return "max(0px, 50%) 50% min(0px, 100%) 50% max(0px, 50%)";
 
+      case "top bottom":
+      case "left right":
+        return "min(0px, 50%) 50% max(0px, 100%) 50% min(0px, 50%)";
+
+      // │ │    ───┐
+      // └─┘    ───┘
+      case "bottom bottom":
+      case "right right":
+        return "max(0px, 100%) 100% min(0px, 100%)";
+
+      case "top top":
+      case "left left":
+        return "min(0px, 100%) 100% max(0px, 100%)";
+
+      //    │        ┌──┐
+      //  ┌─┘     ───┘  │
+      //  └─────        │
       case "bottom left":
-      case "right bottom":
+      case "right top":
         return "max(0px, 50%) min(0px, 100%) max(0px, 50%) max(0px, 50%) min(0px, 100%) max(0px, 50%)";
+
+      case "top right":
+      case "left bottom":
+        return "min(0px, 50%) max(0px, 100%) min(0px, 50%) min(0px, 50%) max(0px, 100%) min(0px, 50%)";
+
+      //    │
+      //    └─┐
+      //  ────┘
+      case "bottom right":
+      case "right bottom":
+        return "max(0px, 50%) max(0px, 100%) max(0px, 50%) min(0px, 50%) min(0px, 100%) min(0px, 50%)";
+
+      //  ┌──┐
+      //  │  └───
+      //  │
+      case "top left":
+      case "left top":
+        return "min(0px, 50%) min(0px, 100%) min(0px, 50%) max(0px, 50%) max(0px, 100%) max(0px, 50%)";
     }
   }
 });
