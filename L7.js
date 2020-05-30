@@ -884,11 +884,14 @@ template_wire.innerHTML = `
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
 }
-.seg:empty::before, .seg:empty::after {
+.seg:empty::before {
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
   background: content-box var(--lineColor);
   pointer-events: none;
+}
+.seg:empty::after {
+  display: none;
 }
 
 /* CLIP */
@@ -925,23 +928,13 @@ template_wire.innerHTML = `
 :host([dir="left"]) .seg.even:empty::before,
 :host([dir="right"]) .seg.even:empty::before,
 :host([dir="bottom"]) .seg.odd:empty::before {
-  width: calc(max(0px, var(--l)) + 2 * var(--r));
-  left: calc(var(--x-) - var(--r));
-  mask-image: linear-gradient(to right, black, transparent);
-  mask-size: calc(50% - 2 * var(--SHADOWRADIUS)) auto;
-  mask-position: left calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS)) top 0;
-  mask-repeat: no-repeat;
-}
-:host([dir="top"]) .seg.odd:empty::after,
-:host([dir="left"]) .seg.even:empty::after,
-:host([dir="right"]) .seg.even:empty::after,
-:host([dir="bottom"]) .seg.odd:empty::after {
-  width: calc(max(0px, -1 * var(--l)) + 2 * var(--r));
-  left: calc(var(--x-) + var(--l) - var(--r));
-  mask-image: linear-gradient(to left, black, transparent);
-  mask-size: calc(50% - 2 * var(--SHADOWRADIUS)) auto;
-  mask-position: right calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS)) top 0;
-  mask-repeat: no-repeat;
+  mask-image: linear-gradient(to right, black var(--r), transparent),
+              linear-gradient(to left, black var(--r), transparent);
+  mask-size:  calc(0.5 * var(--l)) auto,
+              calc(-0.5 * var(--l)) auto;
+  mask-position: left var(--r) top 0,
+                 right var(--r) top 0;
+  mask-repeat: no-repeat, no-repeat;
 }
 :host([type="dashed"][dir="top"]) .seg.odd::after,
 :host([type="dashed"][dir="left"]) .seg.even::after,
@@ -980,23 +973,13 @@ template_wire.innerHTML = `
 :host([dir="left"]) .seg.odd:empty::before,
 :host([dir="right"]) .seg.odd:empty::before,
 :host([dir="bottom"]) .seg.even:empty::before {
-  height: calc(max(0px, var(--l)) + 2 * var(--r));
-  top: calc(var(--y-) - var(--r));
-  mask-image: linear-gradient(to bottom, black, transparent);
-  mask-size: auto calc(50% - 2 * var(--SHADOWRADIUS));
-  mask-position: left 0 top calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS));
-  mask-repeat: no-repeat;
-}
-:host([dir="top"]) .seg.even:empty::after,
-:host([dir="left"]) .seg.odd:empty::after,
-:host([dir="right"]) .seg.odd:empty::after,
-:host([dir="bottom"]) .seg.even:empty::after {
-  height: calc(max(0px, -1 * var(--l)) + 2 * var(--r));
-  top: calc(var(--y-) + var(--l) - var(--r));
-  mask-image: linear-gradient(to top, black, transparent);
-  mask-size: auto calc(50% - 2 * var(--SHADOWRADIUS));
-  mask-position: left 0 bottom calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS));
-  mask-repeat: no-repeat;
+  mask-image: linear-gradient(to bottom, black var(--r), transparent),
+              linear-gradient(to top, black var(--r), transparent);
+  mask-size:  auto calc(0.5 * var(--l)),
+              auto calc(-0.5 * var(--l));
+  mask-position: left 0 top var(--r),
+                 left 0 bottom var(--r);
+  mask-repeat: no-repeat, no-repeat;
 }
 :host([type="dashed"][dir="top"]) .seg.even::after,
 :host([type="dashed"][dir="left"]) .seg.odd::after,
