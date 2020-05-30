@@ -283,32 +283,60 @@ customElements.define("l7-box", class extends HTMLElement {
     if ( !mode.includes("top") && mode.includes("bottom") )
       ymin = -height;
 
-    return (shiftX, shiftY) => {
-      let rect = Object.assign(original_rect, {});
-      if ( shiftX === undefined || shiftY === undefined )
+    if ( this.offsetParent.matches("l7-box") ) {
+      return (shiftX, shiftY) => {
+        let rect = Object.assign(original_rect, {});
+        if ( shiftX === undefined || shiftY === undefined )
+          return rect;
+
+        shiftX = Math.max(xmin, Math.min(shiftX, xmax));
+        shiftY = Math.max(ymin, Math.min(shiftY, ymax));
+
+        if ( mode.includes("left") )
+          rect.left = `${100*(left+shiftX)/parentWidth}%`;
+
+        if ( !mode.includes("left") && mode.includes("right") )
+          rect.width = `${100*(width+shiftX)/parentWidth}%`;
+        if ( mode.includes("left") && !mode.includes("right") )
+          rect.width = `${100*(width-shiftX)/parentWidth}%`;
+
+        if ( mode.includes("top") )
+          rect.top = `${100*(top+shiftY)/parentHeight}%`;
+
+        if ( !mode.includes("top") && mode.includes("bottom") )
+          rect.height = `${100*(height+shiftY)/parentHeight}%`;
+        if ( mode.includes("top") && !mode.includes("bottom") )
+          rect.height = `${100*(height-shiftY)/parentHeight}%`;
         return rect;
+      };
 
-      shiftX = Math.max(xmin, Math.min(shiftX, xmax));
-      shiftY = Math.max(ymin, Math.min(shiftY, ymax));
+    } else {
+      return (shiftX, shiftY) => {
+        let rect = Object.assign(original_rect, {});
+        if ( shiftX === undefined || shiftY === undefined )
+          return rect;
 
-      if ( mode.includes("left") )
-        rect.left = `${100*(left+shiftX)/parentWidth}%`;
+        shiftX = Math.max(xmin, Math.min(shiftX, xmax));
+        shiftY = Math.max(ymin, Math.min(shiftY, ymax));
 
-      if ( !mode.includes("left") && mode.includes("right") )
-        rect.width = `${100*(width+shiftX)/parentWidth}%`;
-      if ( mode.includes("left") && !mode.includes("right") )
-        rect.width = `${100*(width-shiftX)/parentWidth}%`;
+        if ( mode.includes("left") )
+          rect.left = `${left+shiftX}px`;
 
-      if ( mode.includes("top") )
-        rect.top = `${100*(top+shiftY)/parentHeight}%`;
+        if ( !mode.includes("left") && mode.includes("right") )
+          rect.width = `${width+shiftX}px`;
+        if ( mode.includes("left") && !mode.includes("right") )
+          rect.width = `${width-shiftX}px`;
 
-      if ( !mode.includes("top") && mode.includes("bottom") )
-        rect.height = `${100*(height+shiftY)/parentHeight}%`;
-      if ( mode.includes("top") && !mode.includes("bottom") )
-        rect.height = `${100*(height-shiftY)/parentHeight}%`;
+        if ( mode.includes("top") )
+          rect.top = `${top+shiftY}px`;
 
-      return rect;
-    };
+        if ( !mode.includes("top") && mode.includes("bottom") )
+          rect.height = `${height+shiftY}px`;
+        if ( mode.includes("top") && !mode.includes("bottom") )
+          rect.height = `${height-shiftY}px`;
+        return rect;
+      };
+    }
   }
   ondragg(event) {
     let mode;
