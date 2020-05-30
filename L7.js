@@ -887,38 +887,38 @@ template_wire.innerHTML = `
 /* SEGMENTS */
 .seg {
   --length: initial;
+  position: absolute;
 }
-.seg::before {
+:host > .seg {
+  z-index: 2;
+}
+.seg::before, .seg::after {
   box-sizing: border-box;
   content: "";
   display: block;
   position: absolute;
+}
+.seg::before {
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   background: content-box var(--SHADOWCOLOR);
   pointer-events: none;
-  z-index: 2;
 }
 .seg::after {
-  box-sizing: border-box;
-  content: "";
-  display: block;
-  position: absolute;
   --r: var(--HOVERRADIUS);
-  border: calc(var(--r) - var(--LINERADIUS)) solid transparent;
+  border: calc(var(--HOVERRADIUS) - var(--LINERADIUS)) solid transparent;
   background: content-box var(--lineColor);
   pointer-events: auto;
-  z-index: 2;
 
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
 }
-.seg:empty::before {
+.seg:empty::after {
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
   background: content-box var(--lineColor);
   pointer-events: none;
 }
-.seg:empty::after {
+.seg:empty::before {
   display: none;
 }
 
@@ -941,37 +941,23 @@ template_wire.innerHTML = `
 :host([dir="left"]) .seg.even,
 :host([dir="right"]) .seg.even,
 :host([dir="bottom"]) .seg.odd {
+  --\\%: calc(var(--deltaX) / 100);
+  left: var(--length);
   cursor: ns-resize;
 }
-:host([dir="top"]) .seg.odd::before,    :host([dir="top"]) .seg.odd::after,
-:host([dir="left"]) .seg.even::before,  :host([dir="left"]) .seg.even::after,
+:host([dir="top"]) .seg.odd::before, :host([dir="top"]) .seg.odd::after,
+:host([dir="left"]) .seg.even::before, :host([dir="left"]) .seg.even::after,
 :host([dir="right"]) .seg.even::before, :host([dir="right"]) .seg.even::after,
 :host([dir="bottom"]) .seg.odd::before, :host([dir="bottom"]) .seg.odd::after {
-  height: calc(2 * var(--r));
-  width: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
-  left: calc(var(--x-) + min(0px, var(--l)) - var(--r));
-  top: calc(var(--y-) - var(--r));
-}
-:host([dir="top"]) .seg.odd:empty::before,
-:host([dir="left"]) .seg.even:empty::before,
-:host([dir="right"]) .seg.even:empty::before,
-:host([dir="bottom"]) .seg.odd:empty::before {
-  mask-image: linear-gradient(to right, black var(--r), transparent),
-              linear-gradient(to left, black var(--r), transparent);
-  mask-size:  calc(0.5 * var(--l)) auto,
-              calc(-0.5 * var(--l)) auto;
-  mask-position: left var(--r) top 0,
-                 right var(--r) top 0;
-  mask-repeat: no-repeat, no-repeat;
+  top: calc(-1 * var(--r));
+  left: calc(-1 * var(--r) - max(0px, var(--length)));
+  right: calc(-1 * var(--r) + min(0px, var(--length)));
+  bottom: calc(-1 * var(--r));
 }
 :host([type="dashed"][dir="top"]) .seg.odd::after,
 :host([type="dashed"][dir="left"]) .seg.even::after,
 :host([type="dashed"][dir="right"]) .seg.even::after,
-:host([type="dashed"][dir="bottom"]) .seg.odd::after,
-:host([type="dashed"][dir="top"]) .seg.odd:empty::before,
-:host([type="dashed"][dir="left"]) .seg.even:empty::before,
-:host([type="dashed"][dir="right"]) .seg.even:empty::before,
-:host([type="dashed"][dir="bottom"]) .seg.odd:empty::before {
+:host([type="dashed"][dir="bottom"]) .seg.odd::after {
   background-color: initial;
   background-image: linear-gradient(to right, var(--lineColor) 0, var(--DASHLENGTH1),
                                     transparent 0, transparent var(--DASHLENGTH2));
@@ -980,43 +966,41 @@ template_wire.innerHTML = `
   background-clip: content-box;
   background-repeat: repeat-x;
 }
+:host([dir="top"]) .seg.odd:empty::after,
+:host([dir="left"]) .seg.even:empty::after,
+:host([dir="right"]) .seg.even:empty::after,
+:host([dir="bottom"]) .seg.odd:empty::after {
+  mask-image: linear-gradient(to right, black var(--r), transparent),
+              linear-gradient(to left, black var(--r), transparent);
+  mask-size:  calc(0.5 * var(--length)) auto,
+              calc(-0.5 * var(--length)) auto;
+  mask-position: left var(--r) top 0,
+                 right var(--r) top 0;
+  mask-repeat: no-repeat, no-repeat;
+}
 
 /* VERTICAL */
 :host([dir="top"]) .seg.even,
 :host([dir="left"]) .seg.odd,
 :host([dir="right"]) .seg.odd,
 :host([dir="bottom"]) .seg.even {
+  --\\%: calc(var(--deltaY) / 100);
+  top: var(--length);
   cursor: ew-resize;
 }
-:host([dir="top"]) .seg.even::before,    :host([dir="top"]) .seg.even::after,
-:host([dir="left"]) .seg.odd::before,    :host([dir="left"]) .seg.odd::after,
-:host([dir="right"]) .seg.odd::before,   :host([dir="right"]) .seg.odd::after,
+:host([dir="top"]) .seg.even::before, :host([dir="top"]) .seg.even::after,
+:host([dir="left"]) .seg.odd::before, :host([dir="left"]) .seg.odd::after,
+:host([dir="right"]) .seg.odd::before, :host([dir="right"]) .seg.odd::after,
 :host([dir="bottom"]) .seg.even::before, :host([dir="bottom"]) .seg.even::after {
-  width: calc(2 * var(--r));
-  height: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
-  top: calc(var(--y-) + min(0px, var(--l)) - var(--r));
-  left: calc(var(--x-) - var(--r));
-}
-:host([dir="top"]) .seg.even:empty::before,
-:host([dir="left"]) .seg.odd:empty::before,
-:host([dir="right"]) .seg.odd:empty::before,
-:host([dir="bottom"]) .seg.even:empty::before {
-  mask-image: linear-gradient(to bottom, black var(--r), transparent),
-              linear-gradient(to top, black var(--r), transparent);
-  mask-size:  auto calc(0.5 * var(--l)),
-              auto calc(-0.5 * var(--l));
-  mask-position: left 0 top var(--r),
-                 left 0 bottom var(--r);
-  mask-repeat: no-repeat, no-repeat;
+  top: calc(-1 * var(--r) - max(0px, var(--length)));
+  left: calc(-1 * var(--r));
+  right: calc(-1 * var(--r));
+  bottom: calc(-1 * var(--r) + min(0px, var(--length)));
 }
 :host([type="dashed"][dir="top"]) .seg.even::after,
 :host([type="dashed"][dir="left"]) .seg.odd::after,
 :host([type="dashed"][dir="right"]) .seg.odd::after,
-:host([type="dashed"][dir="bottom"]) .seg.even::after,
-:host([type="dashed"][dir="top"]) .seg.even:empty::before,
-:host([type="dashed"][dir="left"]) .seg.odd:empty::before,
-:host([type="dashed"][dir="right"]) .seg.odd:empty::before,
-:host([type="dashed"][dir="bottom"]) .seg.even:empty::before {
+:host([type="dashed"][dir="bottom"]) .seg.even::after {
   background-color: initial;
   background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--DASHLENGTH1),
                                     transparent 0, transparent var(--DASHLENGTH2));
@@ -1025,36 +1009,17 @@ template_wire.innerHTML = `
   background-clip: content-box;
   background-repeat: repeat-y;
 }
-
-/* position calculation */
-:host([dir="top"]) .seg.odd,
-:host([dir="left"]) .seg.even,
-:host([dir="right"]) .seg.even,
-:host([dir="bottom"]) .seg.odd {
-  --\\%: calc(var(--deltaX) / 100);
-  --l: var(--length);
-  --x: calc(var(--x-) + var(--l));
-  --y-: var(--y);
-}
-:host([dir="left"]) > .seg.even,
-:host([dir="right"]) > .seg.even {
-  --x-: 0px;
-  --y: 0px;
-}
-
-:host([dir="top"]) .seg.even,
-:host([dir="left"]) .seg.odd,
-:host([dir="right"]) .seg.odd,
-:host([dir="bottom"]) .seg.even {
-  --\\%: calc(var(--deltaY) / 100);
-  --l: var(--length);
-  --y: calc(var(--y-) + var(--l));
-  --x-: var(--x);
-}
-:host([dir="top"]) > .seg.even,
-:host([dir="bottom"]) > .seg.even {
-  --y-: 0px;
-  --x: 0px;
+:host([dir="top"]) .seg.even:empty::after,
+:host([dir="left"]) .seg.odd:empty::after,
+:host([dir="right"]) .seg.odd:empty::after,
+:host([dir="bottom"]) .seg.even:empty::after {
+  mask-image: linear-gradient(to bottom, black var(--r), transparent),
+              linear-gradient(to top, black var(--r), transparent);
+  mask-size:  auto calc(0.5 * var(--length)),
+              auto calc(-0.5 * var(--length));
+  mask-position: left 0 top var(--r),
+                 left 0 bottom var(--r);
+  mask-repeat: no-repeat, no-repeat;
 }
 </style>
 
@@ -1066,6 +1031,7 @@ customElements.define("l7-wire", class extends HTMLElement {
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_wire.content.cloneNode(true));
     this._requested = false;
+    this.ondragg = this.ondragg.bind(this);
   }
   static get observedAttributes() {
     return ["from", "to", "style"];
@@ -1073,19 +1039,17 @@ customElements.define("l7-wire", class extends HTMLElement {
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "style" ) {
-        let path = this.getComputedPath();
-        if ( this.hasAttribute("from") )
-          path = path.reverse().map(p => `-1 * (${p})`);
+        let lengths = this.getLengths();
 
         let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
 
-        if ( segments.length > path.length ) {
-          segments[path.length].remove();
+        if ( segments.length > lengths.length ) {
+          segments[lengths.length].remove();
 
-        } else if ( segments.length < path.length ) {
+        } else if ( segments.length < lengths.length ) {
           let last = segments[segments.length-1] || this.shadowRoot;
-          for ( let n=segments.length; n<path.length; n++ ) {
-            let seg = document.createElement("div");
+          for ( let n=segments.length; n<lengths.length; n++ ) {
+            let seg = document.createElement("dragg-able");
             seg.classList.add("seg");
             seg.classList.add(n % 2 === 0 ? "even" : "odd");
             last.appendChild(seg);
@@ -1094,8 +1058,8 @@ customElements.define("l7-wire", class extends HTMLElement {
           }
         }
 
-        for ( let n=0; n<path.length; n++ )
-          segments[n].style.setProperty("--length", `calc(${path[n]})`);
+        for ( let n=0; n<lengths.length; n++ )
+          segments[n].style.setProperty("--length", `calc(${lengths[n]})`);
 
       } else if ( name === "from" || name === "to" ) {
         this.updateDelta();
@@ -1103,7 +1067,11 @@ customElements.define("l7-wire", class extends HTMLElement {
     }
   }
   connectedCallback() {
+    this.shadowRoot.addEventListener("dragg", this.ondragg);
     requestAnimationFrame(() => this.updateDelta());
+  }
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
 
   get dir() {
@@ -1121,6 +1089,13 @@ customElements.define("l7-wire", class extends HTMLElement {
     else
       return this;
   }
+  get path() {
+    return this.style.getPropertyValue("--path") || this.getDefaultPath();
+  }
+  set path(path) {
+    this.start.style.setProperty("--path", path);
+    this.end.style.setProperty("--path", path);
+  }
   updateDelta() {
     let start = this.start, end = this.end;
     if ( !start || !end )
@@ -1130,10 +1105,14 @@ customElements.define("l7-wire", class extends HTMLElement {
     let rect2 = end.getBoundingClientRect();
     let deltaX = rect2.left - rect1.left;
     let deltaY = rect2.top - rect1.top;
-    if ( start.dir === "bottom" ) deltaY -= MINHEADLENGTH;
+    if ( start.dir === "top" )    deltaY += MINHEADLENGTH;
+    if ( start.dir === "left" )   deltaX += MINHEADLENGTH;
     if ( start.dir === "right" )  deltaX -= MINHEADLENGTH;
+    if ( start.dir === "bottom" ) deltaY -= MINHEADLENGTH;
     if ( end.dir === "top" )      deltaY -= MINHEADLENGTH;
     if ( end.dir === "left" )     deltaX -= MINHEADLENGTH;
+    if ( end.dir === "right" )    deltaX += MINHEADLENGTH;
+    if ( end.dir === "bottom" )   deltaY += MINHEADLENGTH;
 
     start.setDelta(deltaX, deltaY);
     end.setDelta(deltaX, deltaY);
@@ -1160,26 +1139,6 @@ customElements.define("l7-wire", class extends HTMLElement {
         this._requested = false;
       });
     }
-  }
-  getComputedPath() {
-    let path = this.style.getPropertyValue("--path") || this.getDefaultPath();
-
-    // parse path as list of lengths
-    let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
-    path = Array.from(path.matchAll(regex)).map(res => res[1]);
-
-    // TODO: deal with fr
-
-    // fake percentage unit
-    path = path.map(p => p.replace("%", " * var(--\\%)"));
-
-    // initial/final head length
-    if ( path[0] )
-      path[0] = `${path[0]} + ${MINHEADLENGTH}px`;
-    if ( path[path.length-1] )
-      path[path.length-1] = `${path[path.length-1]} + ${MINHEADLENGTH}px`;
-
-    return path;
   }
   getDefaultPath() {
     let start = this.start, end = this.end;
@@ -1232,6 +1191,142 @@ customElements.define("l7-wire", class extends HTMLElement {
       case "top left":
       case "left top":
         return "min(0px, 50%) min(0px, 100%) min(0px, 50%) max(0px, 50%) max(0px, 100%) max(0px, 50%)";
+    }
+  }
+  getLengths() {
+    // parse path as list of lengths
+    let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
+    let lengths = Array.from(this.path.matchAll(regex)).map(res => res[1]);
+
+    // TODO: deal with fr
+
+    // fake percentage unit
+    lengths = lengths.map(p => p.replace("%", " * var(--\\%)"));
+
+    // initial/final head length
+    let start = this.start;
+    let end = this.end;
+    if ( lengths[0] ) {
+      if ( start.dir === "top" || start.dir === "left" )
+        lengths[0] = `${lengths[0]} - ${MINHEADLENGTH}px`;
+      else
+        lengths[0] = `${lengths[0]} + ${MINHEADLENGTH}px`;
+    }
+    if ( lengths[lengths.length-1] ) {
+      if ( end.dir === "top" || end.dir === "left" )
+        lengths[lengths.length-1] = `${lengths[lengths.length-1]} + ${MINHEADLENGTH}px`;
+      else
+        lengths[lengths.length-1] = `${lengths[lengths.length-1]} - ${MINHEADLENGTH}px`;
+    }
+
+    if ( this.hasAttribute("from") )
+      lengths = lengths.reverse().map(p => `-1 * (${p})`);
+
+    return lengths;
+  }
+
+  makeArranger(seg) {
+    let original_path = this.path;
+    let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
+    let index = segments.indexOf(seg);
+    if ( index === 0 || index === segments.length-1 )
+      return (shiftX, shiftY) => original_path;
+
+    // computed lengths
+    let lengths = [];
+    let dir = this.dir;
+    for ( let i=0; i<segments.length; i++ ) {
+      if ( (i % 2 === 0) === (dir === "left" || dir === "right") )
+        lengths.push(segments[i].offsetLeft);
+      else
+        lengths.push(segments[i].offsetTop);
+    }
+
+    // computed path
+    let computed_path = Array.from(lengths);
+    if ( this.hasAttribute("from") ) {
+      computed_path = computed_path.reverse().map(p => -p);
+      index = computed_path.length-1 - index;
+    }
+
+    let start = this.start;
+    let end = this.end;
+    let dir1 = start.dir;
+    let dir2 = end.dir;
+    if ( dir1 === "top" )    computed_path[0] += MINHEADLENGTH;
+    if ( dir1 === "left" )   computed_path[0] += MINHEADLENGTH;
+    if ( dir1 === "right" )  computed_path[0] -= MINHEADLENGTH;
+    if ( dir1 === "bottom" ) computed_path[0] -= MINHEADLENGTH;
+    if ( dir2 === "top" )    computed_path[computed_path.length-1] -= MINHEADLENGTH;
+    if ( dir2 === "left" )   computed_path[computed_path.length-1] -= MINHEADLENGTH;
+    if ( dir2 === "right" )  computed_path[computed_path.length-1] += MINHEADLENGTH;
+    if ( dir2 === "bottom" ) computed_path[computed_path.length-1] += MINHEADLENGTH;
+
+    let deltaX = parseFloat(this.style.getPropertyValue("--deltaX"));
+    let deltaY = parseFloat(this.style.getPropertyValue("--deltaY"));
+
+    // normalized path
+    let normalized_path = [];
+    for ( let i=0; i<computed_path.length; i++ ) {
+      if ( (i % 2 === 0) === (dir1 === "left" || dir1 === "right") )
+        normalized_path.push(`${100 * computed_path[i] / deltaX}%`);
+      else
+        normalized_path.push(`${100 * computed_path[i] / deltaY}%`);
+    }
+
+    let min = -Infinity,
+        max = +Infinity;
+    if ( index === 1 && (dir1 === "top" || dir1 === "left") )
+      max = Math.min(max, -computed_path[0]);
+    if ( index === 1 && (dir1 === "bottom" || dir1 === "right") )
+      min = Math.max(min, -computed_path[0]);
+    if ( index === computed_path.length-2 && (dir2 === "top" || dir2 === "left") )
+      max = Math.min(max, computed_path[computed_path.length-1]);
+    if ( index === computed_path.length-2 && (dir2 === "bottom" || dir2 === "right") )
+      min = Math.max(min, computed_path[computed_path.length-1]);
+
+    let is_horizontal = (index % 2 === 0) === (dir1 === "left" || dir1 === "right");
+
+    return (shiftX, shiftY) => {
+      if ( shiftX === undefined || shiftY === undefined )
+        return original_path;
+
+      let path = Array.from(normalized_path);
+      if ( is_horizontal ) {
+        shiftY = Math.max(min, Math.min(shiftY, max));
+        path[index-1] = `${100 * (computed_path[index-1] + shiftY) / deltaY}%`;
+        path[index+1] = `${100 * (computed_path[index+1] - shiftY) / deltaY}%`;
+      } else {
+        shiftX = Math.max(min, Math.min(shiftX, max));
+        path[index-1] = `${100 * (computed_path[index-1] + shiftX) / deltaX}%`;
+        path[index+1] = `${100 * (computed_path[index+1] - shiftX) / deltaX}%`;
+      }
+
+      return path.join(" ");
+    };
+  }
+  ondragg(event) {
+    if ( event.target.matches(".seg") ) {
+      event.stopPropagation();
+      event.detail.register(this.onarrange(event.target));
+    }
+  }
+  *onarrange(seg) {
+    let arranger = this.makeArranger(seg);
+    this.classList.add("arranging");
+
+    try {
+      while ( true ) {
+        let [shiftX, shiftY] = yield;
+        this.path = arranger(shiftX, shiftY);
+      }
+
+    } catch {
+      this.path = arranger();
+
+    } finally {
+      this.classList.remove("arranging");
+
     }
   }
 });
