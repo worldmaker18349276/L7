@@ -29,7 +29,7 @@ customElements.define("dragg-able", class extends HTMLElement {
   }
 
   onpointerdown(event) {
-    if ( event.buttons === 1 && modifiersOf(event) === 0 && event.target === this ) {
+    if ( event.buttons === 1 && modifiersOf(event) === 0 ) {
       this.dispatchEvent(new CustomEvent("dragg", {
         bubbles: true,
         cancelable: false,
@@ -91,185 +91,143 @@ customElements.define("dragg-able", class extends HTMLElement {
 
 // z-index:
 //   1: shadow
-//   2: stroke
-//   3: handle
+//   2: line
+//   3: dot
 //   4: content
 //   5: hovered
-
-const dot_css = `
-.dot {
-  cursor: pointer;
-  position: absolute;
-}
-.dot::before, .dot::after {
-  content: "";
-  display: block;
-  position: absolute;
-
-  top: var(---r);
-  left: var(---r);
-  right: var(---r);
-  bottom: var(---r);
-}
-.dot::before {
-  ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
-  background: content-box var(--SHADOWCOLOR, transparent);
-  pointer-events: none;
-  opacity: var(--dotVisible, 1);
-  z-index: 1;
-}
-.dot::after {
-  box-sizing: border-box;
-  ---r: calc(-1 * var(--HOVERRADIUS));
-  border: calc(var(--HOVERRADIUS) - var(--DOTRADIUS)) solid transparent;
-  background: content-box var(--frameColor, transparent);
-  outline: var(--LINERADIUS) solid var(--dotFillColor, var(--frameColor, transparent));
-  outline-offset: var(---r);
-  opacity: var(--dotVisible, 1);
-  pointer-events: auto;
-  z-index: 3;
-}
-`;
 
 const template_box = document.createElement("template");
 template_box.innerHTML = `
 <style>
 :host {
   position: absolute;
-  left:   var(--left);
-  top:    var(--top);
   width:  var(--width);
   height: var(--height);
-
-  background: var(--BGCOLOR);
   pointer-events: none;
   z-index: 4;
 }
 :host(:hover) {
   z-index: 5;
 }
-:host([dir="bottom"]), :host([dir="right"]) {
-  left: var(--x);
-  top:  var(--y);
+:host(:not([dir])) {
+  left: var(--left);
+  top:  var(--top);
 }
-:host([dir="top"]), :host([dir="left"]) {
-  left: calc(var(--x) - var(--width));
-  top:  calc(var(--y) - var(--height));
+:host([dir*="top"]) {
+  bottom: calc(100% - var(--y));
+}
+:host([dir*="left"]) {
+  right: calc(100% - var(--x));
+}
+:host([dir*="right"]) {
+  left: var(--x);
+}
+:host([dir*="bottom"]) {
+  top: var(--y);
+}
+.edge, .corner, .contents {
+  /* reset controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
 }
 
-.interior {
-  pointer-events: auto;
+/* background */
+[part="background"] {
   position: absolute;
-  z-index: 3;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  background: var(--BGCOLOR);
+  pointer-events: auto;
+  cursor: move;
 
   /* outline: 2px solid yellow; */
   /* outline-offset: -1px; */
 }
-${dot_css}
-.dot::before, .dot::after {
-  --dotVisible: 0;
+
+/* CORNERS */
+.corner {
+  --port-dotVisible: 0;
+  --port-horizontal: 1;
+  --port-vertical: 1;
 }
-.top {
-  top: 0px;
+.corner::slotted(:hover) {
+  z-index: auto;
 }
-.left {
-  left: 0px;
+.corner[name*="top"]::slotted(*) {
+  --y: 0%;
 }
-.right {
-  right: 0px;
+.corner[name*="left"]::slotted(*) {
+  --x: 0%;
 }
-.bottom {
-  bottom: 0px;
+.corner[name*="right"]::slotted(*) {
+  --x: 100%;
 }
-.interior {
-  cursor: move;
+.corner[name*="bottom"]::slotted(*) {
+  --y: 100%;
 }
-.dot.top.left {
-  cursor: nw-resize;
+.corner[name="top-left"] {
+  --port-cursor: nw-resize;
 }
-.dot.top.right {
-  cursor: ne-resize;
+.corner[name="top-right"] {
+  --port-cursor: ne-resize;
 }
-.dot.bottom.left {
-  cursor: sw-resize;
+.corner[name="bottom-left"] {
+  --port-cursor: sw-resize;
 }
-.dot.bottom.right {
-  cursor: se-resize;
+.corner[name="bottom-right"] {
+  --port-cursor: se-resize;
+}
+:host([dir="bottom-right"]) .corner[name="top-left"],
+:host([dir="bottom-left"]) .corner[name="top-right"],
+:host([dir="top-right"]) .corner[name="bottom-left"],
+:host([dir="top-left"]) .corner[name="bottom-right"] {
+  --port-shadowVisible: 0;
+  --port-dotVisible: inherit;
+  --port-cursor: inherit;
+  --port-dotColor: inherit;
+  --port-filledColor: inherit;
+}
+:host([dir="bottom-right"]:hover) .corner[name="top-left"],
+:host([dir="bottom-left"]:hover) .corner[name="top-right"],
+:host([dir="top-right"]:hover) .corner[name="bottom-left"],
+:host([dir="top-left"]:hover) .corner[name="bottom-right"] {
+  --port-shadowVisible: initial;
 }
 
-::slotted(*) {
-  --dotVisible: initial;
-  --dotFillColor: initial;
-  --frameColor: var(--STROKECOLOR);
+/* EDGES */
+.edge {
+  --border-clipTopLeft: inherit;
+  --border-clipTopRight: inherit;
+  --border-clipBottomLeft: inherit;
+  --border-clipBottomRight: inherit;
 }
-:host(:hover) ::slotted(*) {
-  --frameColor: var(--HOVERCOLOR);
-}
-.dot:hover {
-  --frameColor: var(--FOCUSCOLOR);
-}
-
-::slotted(*) {
-  --clip-top: 0;
-  --clip-left: 0;
-  --clip-right: 0;
-  --clip-bottom: 0;
-}
-:host([dir="bottom"]:not(:hover)) ::slotted([dir="left"]),
-:host([dir="bottom"]:not(:hover)) ::slotted([dir="right"]),
-:host([dir="right"]:not(:hover)) ::slotted([dir="left"]),
-:host([dir="left"]:not(:hover)) ::slotted([dir="right"]) {
-  --clip-top: 1;
-}
-:host([dir="right"]:not(:hover)) ::slotted([dir="top"]),
-:host([dir="right"]:not(:hover)) ::slotted([dir="bottom"]),
-:host([dir="bottom"]:not(:hover)) ::slotted([dir="top"]),
-:host([dir="top"]:not(:hover)) ::slotted([dir="bottom"]) {
-  --clip-left: 1;
-}
-:host([dir="left"]:not(:hover)) ::slotted([dir="top"]),
-:host([dir="left"]:not(:hover)) ::slotted([dir="bottom"]),
-:host([dir="bottom"]:not(:hover)) ::slotted([dir="top"]),
-:host([dir="top"]:not(:hover)) ::slotted([dir="bottom"]) {
-  --clip-right: 1;
-}
-:host([dir="top"]:not(:hover)) ::slotted([dir="left"]),
-:host([dir="top"]:not(:hover)) ::slotted([dir="right"]),
-:host([dir="right"]:not(:hover)) ::slotted([dir="left"]),
-:host([dir="left"]:not(:hover)) ::slotted([dir="right"]) {
-  --clip-bottom: 1;
-}
-
-:host([dir="top"]) .dot.end,
-:host([dir="left"]) .dot.end,
-:host([dir="right"]) .dot.start,
-:host([dir="bottom"]) .dot.start {
-  cursor: pointer;
-}
-:host([dir="top"]) .dot.end::after,
-:host([dir="left"]) .dot.end::after,
-:host([dir="right"]) .dot.start::after,
-:host([dir="bottom"]) .dot.start::after {
-  --dotVisible: 1;
-}
-:host([dir="top"]:hover) .dot.end::before,
-:host([dir="left"]:hover) .dot.end::before,
-:host([dir="right"]:hover) .dot.start::before,
-:host([dir="bottom"]:hover) .dot.start::before {
-  --dotVisible: 1;
+:host(:hover) .edge {
+  --border-lineColor: var(--HOVERCOLOR);
 }
 </style>
 
-<dragg-able class="handle interior top left right bottom"></dragg-able>
-<slot name="top"></slot>
-<slot name="left"></slot>
-<slot name="right"></slot>
-<slot name="bottom"></slot>
-<dragg-able class="handle dot top left start"></dragg-able>
-<dragg-able class="handle dot top right"></dragg-able>
-<dragg-able class="handle dot bottom left"></dragg-able>
-<dragg-able class="handle dot bottom right end"></dragg-able>
-<slot></slot>
+<dragg-able part="background"></dragg-able>
+<slot class="edge" name="top"></slot>
+<slot class="edge" name="left"></slot>
+<slot class="edge" name="right"></slot>
+<slot class="edge" name="bottom"></slot>
+<slot class="corner" name="top-left"></slot>
+<slot class="corner" name="top-right"></slot>
+<slot class="corner" name="bottom-left"></slot>
+<slot class="corner" name="bottom-right"></slot>
+<slot class="contents"></slot>
 `;
 customElements.define("l7-box", class extends HTMLElement {
   constructor() {
@@ -277,17 +235,12 @@ customElements.define("l7-box", class extends HTMLElement {
     this.attachShadow({mode: "open"});
     this.shadowRoot.appendChild(template_box.content.cloneNode(true));
 
-    this.onborderschange = this.onborderschange.bind(this);
     this.ondragg = this.ondragg.bind(this);
   }
   connectedCallback() {
-    this._observer = new MutationObserver(this.onborderschange);
-    this._observer.observe(this, {childList: true});
-
     this.shadowRoot.addEventListener("dragg", this.ondragg);
   }
   disconnectedCallback() {
-    this._observer.disconnect();
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
 
@@ -357,44 +310,44 @@ customElements.define("l7-box", class extends HTMLElement {
       return rect;
     };
   }
-  onborderschange() {
-    for ( let side of ["top", "left"] ) {
-      let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
-      for ( let [i, border] of borders.entries() )
-        if ( border.style.getPropertyValue("--order") === "" )
-          border.style.setProperty("--order", i);
-    }
-    for ( let side of ["bottom", "right"] ) {
-      let borders = Array.from(this.querySelectorAll(`:scope > l7-border[slot="${side}"]`));
-      for ( let [i, border] of borders.reverse().entries() )
-        if ( border.style.getPropertyValue("--order") === "" )
-          border.style.setProperty("--order", i);
-    }
-  }
   ondragg(event) {
     let mode;
-    if ( event.target.matches(".handle") && event.target.getRootNode() === this.shadowRoot ) {
-      if ( (this.dir === "top" || this.dir === "left") && event.target.matches(".interior, .end") )
-        return;
-      if ( (this.dir === "bottom" || this.dir === "right") && event.target.matches(".interior, .start") )
+    if ( event.target.matches("[part='background']") && event.target.getRootNode() === this.shadowRoot ) {
+      // :host(:not([dir])) > [part="background"]
+
+      if ( this.dir )
         return;
 
-      mode = Array.from(event.target.classList);
+      mode = ["top", "bottom", "left", "right"];
 
     } else if ( event.target.matches("l7-border") && event.target.parentNode === this ) {
+      // :scope > l7-border
+
       mode = [event.target.slot];
+
+    } else if ( event.target.matches("l7-port") ) {
+      // l7-box:not([dir="bottom-right"]) l7-port[slot="top-left"]
+      // l7-box:not([dir="bottom-left"]) l7-port[slot="top-right"]
+      // l7-box:not([dir="top-right"]) l7-port[slot="bottom-left"]
+      // l7-box:not([dir="top-left"]) l7-port[slot="bottom-right"]
+
+      if ( this.dir === "top-left" && event.target.matches("[slot='bottom-right']") )
+        return;
+      if ( this.dir === "top-right" && event.target.matches("[slot='bottom-left']") )
+        return;
+      if ( this.dir === "bottom-left" && event.target.matches("[slot='top-right']") )
+        return;
+      if ( this.dir === "bottom-right" && event.target.matches("[slot='top-left']") )
+        return;
+
+      mode = event.target.slot.split("-");
 
     } else {
       return;
     }
 
-    if ( !this.dir ) {
-      mode = mode.filter(s => ["top", "left", "bottom", "right"].includes(s));
-    } else if ( this.dir === "top" || this.dir === "left" ) {
-      mode = mode.filter(s => ["top", "left"].includes(s));
-    } else if ( this.dir === "bottom" || this.dir === "right" ) {
-      mode = mode.filter(s => ["bottom", "right"].includes(s));
-    }
+    let movable = !this.dir ? ["top", "left", "bottom", "right"] : this.dir.split("-");
+    mode = mode.filter(s => movable.includes(s));
 
     event.detail.register(this.onresize(mode));
     event.stopPropagation();
@@ -436,127 +389,169 @@ template_border.innerHTML = `
   height: 100%;
   pointer-events: none;
   z-index: auto;
+
+  /* controlled variables:
+  --border-lineColor
+  --border-clipTopLeft
+  --border-clipTopRight
+  --border-clipBottomLeft
+  --border-clipBottomRight
+  */
 }
 :host(:hover) {
   z-index: 5;
 }
+.ports {
+  /* reset controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
+}
 
-.center, .line::before, .line::after, .line .handle {
+/* POSITION */
+[part="line"] {
+  position: absolute;
+}
+:host([slot="top"]) [part="line"] {
+  left:   0px;
+  right:  0px;
+  height: 0px;
+  top: var(--shift);
+  cursor: n-resize;
+}
+:host([slot="bottom"]) [part="line"] {
+  left:   0px;
+  right:  0px;
+  height: 0px;
+  bottom: var(--shift);
+  cursor: s-resize;
+}
+:host([slot="left"]) [part="line"] {
+  top:    0px;
+  bottom: 0px;
+  width:  0px;
+  left: var(--shift);
+  cursor: w-resize;
+}
+:host([slot="right"]) [part="line"] {
+  top:    0px;
+  bottom: 0px;
+  width:  0px;
+  right: var(--shift);
+  cursor: e-resize;
+}
+
+/* VIEW */
+[part="line"]:hover {
+  --border-lineColor: var(--FOCUSCOLOR);
+}
+[part="line"]::before, [part="line"]::after {
   content: "";
   display: block;
   position: absolute;
-
-  ---r: calc(-1 * var(--r));
-  --s: calc(var(--shift) - var(--r));
-  --w: calc(2 * var(--r));
+  top: var(---r);
+  left: var(---r);
+  right: var(---r);
+  bottom: var(---r);
 }
-.center {
-  --r: 0px;
-}
-.line::before {
+[part="line"]::before {
   box-sizing: border-box;
-  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
+  ---r: calc(-1 * (var(--LINERADIUS) + var(--SHADOWRADIUS)));
   background: content-box var(--SHADOWCOLOR);
   pointer-events: none;
   z-index: 1;
-
-  --c: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
-  padding-top:    calc(var(--clip-top, 0) * var(--c));
-  padding-left:   calc(var(--clip-left, 0) * var(--c));
-  padding-right:  calc(var(--clip-right, 0) * var(--c));
-  padding-bottom: calc(var(--clip-bottom, 0) * var(--c));
 }
-.line::after {
-  --r: var(--LINERADIUS);
-  background: content-box var(--frameColor);
+[part="line"]::after {
+  ---r: calc(-1 * var(--LINERADIUS));
+  background: content-box var(--border-lineColor, var(--STROKECOLOR));
   pointer-events: none;
   z-index: 2;
 }
-.line .handle {
-  --r: var(--HOVERRADIUS);
+[part="line"] .handle {
+  position: absolute;
   pointer-events: auto;
-  z-index: 3;
+  z-index: 2;
 
   /* outline: 1px dashed red; */
   /* outline-offset: -1px; */
 }
-.line:hover, .line:hover ~ ::slotted(*) {
-  --frameColor: var(--FOCUSCOLOR);
+:host([slot="top"]) [part="line"] .handle,
+:host([slot="bottom"]) [part="line"] .handle {
+  left:  var(--HOVERRADIUS);
+  right: var(--HOVERRADIUS);
+  top:    calc(-1 * var(--HOVERRADIUS));
+  bottom: calc(-1 * var(--HOVERRADIUS));
+}
+:host([slot="left"]) [part="line"] .handle,
+:host([slot="right"]) [part="line"] .handle {
+  top:    var(--HOVERRADIUS);
+  bottom: var(--HOVERRADIUS);
+  left:  calc(-1 * var(--HOVERRADIUS));
+  right: calc(-1 * var(--HOVERRADIUS));
 }
 
-.line .handle {
-  ---r: var(--r);
+/* CLIP */
+[part="line"]::before {
+  --c: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([slot="top"]) .center,
-:host([slot="top"]) .line::before,
-:host([slot="top"]) .line::after,
-:host([slot="top"]) .line .handle {
-  left:   var(---r);
-  right:  var(---r);
-  top:    var(--s);
-  height: var(--w);
+:host([slot="top"]:not(:hover)) [part="line"]::before {
+  padding-left: calc(var(--border-clipTopLeft, 0) * var(--c));
+  padding-right: calc(var(--border-clipTopRight, 0) * var(--c));
 }
-:host([slot="bottom"]) .center,
-:host([slot="bottom"]) .line::before,
-:host([slot="bottom"]) .line::after,
-:host([slot="bottom"]) .line .handle {
-  left:   var(---r);
-  right:  var(---r);
-  bottom: var(--s);
-  height: var(--w);
+:host([slot="bottom"]:not(:hover)) [part="line"]::before {
+  padding-left: calc(var(--border-clipBottomLeft, 0) * var(--c));
+  padding-right: calc(var(--border-clipBottomRight, 0) * var(--c));
 }
-:host([slot="left"]) .center,
-:host([slot="left"]) .line::before,
-:host([slot="left"]) .line::after,
-:host([slot="left"]) .line .handle {
-  top:    var(---r);
-  bottom: var(---r);
-  left:   var(--s);
-  width:  var(--w);
+:host([slot="left"]:not(:hover)) [part="line"]::before {
+  padding-top: calc(var(--border-clipTopLeft, 0) * var(--c));
+  padding-bottom: calc(var(--border-clipBottomLeft, 0) * var(--c));
 }
-:host([slot="right"]) .center,
-:host([slot="right"]) .line::before,
-:host([slot="right"]) .line::after,
-:host([slot="right"]) .line .handle {
-  top:    var(---r);
-  bottom: var(---r);
-  right:  var(--s);
-  width:  var(--w);
-}
-:host([slot="top"]) .line {
-  cursor: n-resize;
-}
-:host([slot="bottom"]) .line {
-  cursor: s-resize;
-}
-:host([slot="left"]) .line {
-  cursor: w-resize;
-}
-:host([slot="right"]) .line {
-  cursor: e-resize;
+:host([slot="right"]:not(:hover)) [part="line"]::before {
+  padding-top: calc(var(--border-clipTopRight, 0) * var(--c));
+  padding-bottom: calc(var(--border-clipBottomRight, 0) * var(--c));
 }
 
-:host([slot="top"]) ::slotted(*) {
+/* PORTS */
+.ports {
+  --border-lineColor: inherit;
+  --port-dotColor: var(--border-lineColor);
+}
+[part="line"]:hover ~ .ports {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+:host([slot="top"]) .ports::slotted(*) {
   --x: calc(clamp(0%, var(--offset), 100%));
   --y: var(--shift);
+  --port-horizontal: 1;
 }
-:host([slot="bottom"]) ::slotted(*) {
+:host([slot="bottom"]) .ports::slotted(*) {
   --x: calc(clamp(0%, var(--offset), 100%));
   --y: calc(100% - var(--shift));
+  --port-horizontal: 1;
 }
-:host([slot="left"]) ::slotted(*) {
+:host([slot="left"]) .ports::slotted(*) {
   --x: var(--shift);
   --y: calc(clamp(0%, var(--offset), 100%));
+  --port-vertical: 1;
 }
-:host([slot="right"]) ::slotted(*) {
+:host([slot="right"]) .ports::slotted(*) {
   --x: calc(100% - var(--shift));
   --y: calc(clamp(0%, var(--offset), 100%));
+  --port-vertical: 1;
 }
 </style>
 
-<div class="center"></div>
-<dragg-able class="line"><div class="handle"></div></dragg-able>
-<slot></slot>
+<dragg-able part="line"><div class="handle"></div></dragg-able>
+<slot class="ports"></slot>
 `;
 customElements.define("l7-border", class extends HTMLElement {
   constructor() {
@@ -572,19 +567,21 @@ customElements.define("l7-border", class extends HTMLElement {
   attributeChangedCallback(name, old, value) {
     if ( old !== value ) {
       if ( name === "name" ) {
-        this.shadowRoot.querySelector(".line").title = this.getAttribute("name");
+        this.shadowRoot.querySelector("[part='line']").title = this.getAttribute("name");
       }
     }
   }
   connectedCallback() {
     this.shadowRoot.addEventListener("dragg", this.ondragg);
+    if ( this.style.getPropertyValue("--order") === "" )
+      this.style.setProperty("--order", this.parentNode.querySelectorAll(`:scope > [slot="${this.slot}"]`).length-1);
   }
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
   }
 
   get position() {
-    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".center");
+    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector("[part='line']");
     return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
   }
   makeSorter(side="top") {
@@ -619,12 +616,12 @@ customElements.define("l7-border", class extends HTMLElement {
     };
   }
   ondragg(event) {
-    if ( event.target.matches(".line") && event.target.getRootNode() === this.shadowRoot ) {
-      if ( this.style.getPropertyValue("--order") === "0" )
+    if ( event.target.matches("[part='line']") && event.target.getRootNode() === this.shadowRoot ) {
+      if ( (this.style.getPropertyValue("--order") || "0") === "0" )
         return;
 
-      event.detail.register(this.onreorder(this.slot));
       event.stopPropagation();
+      event.detail.register(this.onreorder(this.slot));
     }
   }
   *onreorder(side) {
@@ -666,29 +663,91 @@ template_port.innerHTML = `
   height: 100%;
   pointer-events: none;
   z-index: auto;
+
+  /* controlled variables:
+  --port-shadowVisible
+  --port-dotVisible
+  --port-cursor
+  --port-dotColor
+  --port-filledColor
+  --port-horizontal
+  --port-vertical
+  */
 }
 :host(:hover) {
   z-index: 5;
 }
 
-${dot_css}
-.dot {
+/* VIEW */
+[part="dot"] {
+  position: absolute;
   left: var(--x);
   top: var(--y);
+  cursor: var(--port-cursor, pointer);
+}
+[part="dot"]::before, [part="dot"]::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: var(---r);
+  left: var(---r);
+  right: var(---r);
+  bottom: var(---r);
+}
+[part="dot"]::before {
+  ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
+  background: content-box var(--SHADOWCOLOR);
+  pointer-events: none;
+  opacity: var(--port-shadowVisible, var(--port-dotVisible, 1));
+  z-index: 1;
+}
+[part="dot"]::after {
+  box-sizing: border-box;
+  ---r: calc(-1 * var(--HOVERRADIUS));
+  border: calc(var(--HOVERRADIUS) - var(--DOTRADIUS)) solid transparent;
+  background: content-box var(--port-dotColor, var(--STROKECOLOR));
+  outline: var(--LINERADIUS) solid var(--port-filledColor, var(--port-dotColor, var(--STROKECOLOR)));
+  outline-offset: var(---r);
+  opacity: var(--port-dotVisible, 1);
+  pointer-events: auto;
+  z-index: 3;
+}
+
+/* CLIP */
+:host(:not(:hover)) ::slotted([dir="top-left"]) {
+  --border-clipBottomRight: 1;
+  --border-clipBottomLeft: var(--port-horizontal, 0);
+  --border-clipTopRight: var(--port-vertical, 0);
+}
+:host(:not(:hover)) ::slotted([dir="top-right"]) {
+  --border-clipBottomLeft: 1;
+  --border-clipBottomRight: var(--port-horizontal, 0);
+  --border-clipTopLeft: var(--port-vertical, 0);
+}
+:host(:not(:hover)) ::slotted([dir="bottom-left"]) {
+  --border-clipTopRight: 1;
+  --border-clipTopLeft: var(--port-horizontal, 0);
+  --border-clipBottomRight: var(--port-vertical, 0);
+}
+:host(:not(:hover)) ::slotted([dir="bottom-right"]) {
+  --border-clipTopLeft: 1;
+  --border-clipTopRight: var(--port-horizontal, 0);
+  --border-clipBottomLeft: var(--port-vertical, 0);
+}
+
+[part="dot"]:hover, [part="dot"]:hover ~ .contents {
+  --port-dotColor: var(--FOCUSCOLOR);
 }
 :host([type="hollow"]) {
-  --dotFillColor: var(--SHADOWCOLOR);
-}
-.dot:hover, .dot:hover ~ ::slotted(*) {
-  --frameColor: var(--FOCUSCOLOR);
+  --port-filledColor: var(--SHADOWCOLOR);
 }
 :host([type="hidden"]) {
-  --dotVisible: 0;
+  --port-dotVisible: 0;
 }
 </style>
 
-<dragg-able class="dot"></dragg-able>
-<slot></slot>
+<dragg-able part="dot"></dragg-able>
+<slot class="contents"></slot>
 `;
 customElements.define("l7-port", class extends HTMLElement {
   constructor() {
@@ -701,18 +760,18 @@ customElements.define("l7-port", class extends HTMLElement {
   static get observedAttributes() {
     return ["name"];
   }
+  attributeChangedCallback(name, old, value) {
+    if ( old !== value ) {
+      if ( name === "name" ) {
+        this.shadowRoot.querySelector("[part='dot']").title = this.getAttribute("name");
+      }
+    }
+  }
   connectedCallback() {
     this.shadowRoot.addEventListener("dragg", this.ondragg);
   }
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("dragg", this.ondragg);
-  }
-  attributeChangedCallback(name, old, value) {
-    if ( old !== value ) {
-      if ( name === "name" ) {
-        this.shadowRoot.querySelector(".dot").title = this.getAttribute("name");
-      }
-    }
   }
 
   get offset() {
@@ -722,34 +781,30 @@ customElements.define("l7-port", class extends HTMLElement {
     this.style.setProperty("--offset", offset);
   }
   get position() {
-    let {offsetLeft, offsetTop, offsetWidth, offsetHeight} = this.shadowRoot.querySelector(".dot");
-    return {left:offsetLeft, top:offsetTop, width:offsetWidth, height:offsetHeight};
+    let {offsetLeft, offsetTop} = this.shadowRoot.querySelector("[part='dot']");
+    return {left:offsetLeft, top:offsetTop};
   }
-  makeShifter() {
+  makeShifter(side) {
     let parentWidth = this.offsetWidth;
     let parentHeight = this.offsetHeight;
     let original_offset = this.offset;
 
     let {left, top} = this.position;
-    if ( this.matches("[slot='top'] > *, [slot='bottom'] > *") )
+    if ( side === "top" || side === "bottom" )
       return (shiftX, shiftY) => shiftX === undefined ? original_offset
                                  : `${100*Math.max(0, Math.min(left+shiftX, parentWidth))/parentWidth}%`;
-    if ( this.matches("[slot='left'] > *, [slot='right'] > *") )
+    if ( side === "left" || side === "right" )
       return (shiftX, shiftY) => shiftY === undefined ? original_offset
                                  : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
   }
   ondragg(event) {
-    if ( event.target.matches(".dot") && event.target.getRootNode() === this.shadowRoot ) {
+    if ( this.matches("l7-border > l7-port") ) {
       event.stopPropagation();
-      event.detail.register(this.onmove());
-
-    } else if ( event.target.matches("l7-box, l7-wire") && event.target.parentNode === this ) {
-      event.stopPropagation();
-      event.detail.register(this.onmove());
+      event.detail.register(this.onmove(this.parentNode.slot));
     }
   }
-  *onmove() {
-    let shifter = this.makeShifter();
+  *onmove(side) {
+    let shifter = this.makeShifter(side);
     this.classList.add("moving");
 
     try {
@@ -789,32 +844,34 @@ template_wire.innerHTML = `
 }
 :host(:hover) {
   z-index: 5;
-  --frameColor: var(--FOCUSCOLOR);
-  --lineColor: var(--FOCUSCOLOR);
+  --lineColor: var(--HOVERCOLOR);
 }
 
-${dot_css}
-:host(:not(:hover)) .dot::before {
-  --dotVisible: 0;
+/* PORT */
+[part="port"] {
+  --port-shadowVisible: 0;
+}
+:host(:hover) [part="port"] {
+  --port-shadowVisible: initial;
+  z-index: auto;
 }
 
+/* SEGMENTS */
 .seg {
   --length: initial;
-  z-index: inherit;
-}
-:host > .seg {
-  z-index: 1;
 }
 .seg::before {
+  box-sizing: border-box;
   content: "";
   display: block;
   position: absolute;
   --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
   background: content-box var(--SHADOWCOLOR);
-  pointer-events: auto;
-  z-index: inherit;
+  pointer-events: none;
+  z-index: 2;
 }
 .seg::after {
+  box-sizing: border-box;
   content: "";
   display: block;
   position: absolute;
@@ -822,14 +879,19 @@ ${dot_css}
   border: calc(var(--r) - var(--LINERADIUS)) solid transparent;
   background: content-box var(--lineColor);
   pointer-events: auto;
-  z-index: inherit;
-}
-.seg:not(:empty)::after {
+  z-index: 2;
+
   /* outline: 1px dashed blue; */
   /* outline-offset: -1px; */
 }
+.seg:empty::before, .seg:empty::after {
+  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
+  border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
+  background: content-box var(--lineColor);
+  pointer-events: none;
+}
 
-
+/* CLIP */
 :host([dir="top"]) > .seg::before {
   padding-bottom: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
@@ -843,7 +905,7 @@ ${dot_css}
   padding-top: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 
-/* horizontal */
+/* HORIZONTAL */
 :host([dir="top"]) .seg.odd,
 :host([dir="left"]) .seg.even,
 :host([dir="right"]) .seg.even,
@@ -854,41 +916,32 @@ ${dot_css}
 :host([dir="left"]) .seg.even::before,  :host([dir="left"]) .seg.even::after,
 :host([dir="right"]) .seg.even::before, :host([dir="right"]) .seg.even::after,
 :host([dir="bottom"]) .seg.odd::before, :host([dir="bottom"]) .seg.odd::after {
-  box-sizing: border-box;
   height: calc(2 * var(--r));
   width: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
   left: calc(var(--x-) + min(0px, var(--l)) - var(--r));
   top: calc(var(--y-) - var(--r));
 }
-:host([dir="top"]) .seg.odd:empty::before,    :host([dir="top"]) .seg.odd:empty::after,
-:host([dir="left"]) .seg.even:empty::before,  :host([dir="left"]) .seg.even:empty::after,
-:host([dir="right"]) .seg.even:empty::before, :host([dir="right"]) .seg.even:empty::after,
-:host([dir="bottom"]) .seg.odd:empty::before, :host([dir="bottom"]) .seg.odd:empty::after {
-  box-sizing: border-box;
-  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
-  height: calc(2 * var(--r));
-  top: calc(var(--y-) - var(--r));
-  border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
-  border-left-width: 0px;
-  border-right-width: 0px;
-  background: content-box var(--lineColor);
-  pointer-events: none;
-}
 :host([dir="top"]) .seg.odd:empty::before,
 :host([dir="left"]) .seg.even:empty::before,
 :host([dir="right"]) .seg.even:empty::before,
 :host([dir="bottom"]) .seg.odd:empty::before {
-  width: calc(max(0px, var(--l)));
-  left: var(--x-);
+  width: calc(max(0px, var(--l)) + 2 * var(--r));
+  left: calc(var(--x-) - var(--r));
   mask-image: linear-gradient(to right, black, transparent);
+  mask-size: calc(50% - 2 * var(--SHADOWRADIUS)) auto;
+  mask-position: left calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS)) top 0;
+  mask-repeat: no-repeat;
 }
 :host([dir="top"]) .seg.odd:empty::after,
 :host([dir="left"]) .seg.even:empty::after,
 :host([dir="right"]) .seg.even:empty::after,
 :host([dir="bottom"]) .seg.odd:empty::after {
-  width: calc(max(0px, -1 * var(--l)));
-  left: calc(var(--x-) + var(--l));
+  width: calc(max(0px, -1 * var(--l)) + 2 * var(--r));
+  left: calc(var(--x-) + var(--l) - var(--r));
   mask-image: linear-gradient(to left, black, transparent);
+  mask-size: calc(50% - 2 * var(--SHADOWRADIUS)) auto;
+  mask-position: right calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS)) top 0;
+  mask-repeat: no-repeat;
 }
 :host([type="dashed"][dir="top"]) .seg.odd::after,
 :host([type="dashed"][dir="left"]) .seg.even::after,
@@ -900,14 +953,14 @@ ${dot_css}
 :host([type="dashed"][dir="bottom"]) .seg.odd:empty::before {
   background-color: initial;
   background-image: linear-gradient(to right, var(--lineColor) 0, var(--DASHLENGTH1),
-                                    var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
+                                    transparent 0, transparent var(--DASHLENGTH2));
   background-size: var(--DASHLENGTH2) auto;
   background-origin: content-box;
   background-clip: content-box;
   background-repeat: repeat-x;
 }
 
-/* vertical */
+/* VERTICAL */
 :host([dir="top"]) .seg.even,
 :host([dir="left"]) .seg.odd,
 :host([dir="right"]) .seg.odd,
@@ -918,41 +971,32 @@ ${dot_css}
 :host([dir="left"]) .seg.odd::before,    :host([dir="left"]) .seg.odd::after,
 :host([dir="right"]) .seg.odd::before,   :host([dir="right"]) .seg.odd::after,
 :host([dir="bottom"]) .seg.even::before, :host([dir="bottom"]) .seg.even::after {
-  box-sizing: border-box;
   width: calc(2 * var(--r));
   height: calc(max(var(--l), -1 * var(--l)) + 2 * var(--r));
   top: calc(var(--y-) + min(0px, var(--l)) - var(--r));
   left: calc(var(--x-) - var(--r));
 }
-:host([dir="top"]) .seg.even:empty::before,    :host([dir="top"]) .seg.even:empty::after,
-:host([dir="left"]) .seg.odd:empty::before,    :host([dir="left"]) .seg.odd:empty::after,
-:host([dir="right"]) .seg.odd:empty::before,   :host([dir="right"]) .seg.odd:empty::after,
-:host([dir="bottom"]) .seg.even:empty::before, :host([dir="bottom"]) .seg.even:empty::after {
-  box-sizing: border-box;
-  --r: calc(var(--LINERADIUS) + var(--SHADOWRADIUS));
-  width: calc(2 * var(--r));
-  left: calc(var(--x-) - var(--r));
-  border: var(--SHADOWRADIUS) solid var(--SHADOWCOLOR);
-  border-top-width: 0px;
-  border-bottom-width: 0px;
-  background: content-box var(--lineColor);
-  pointer-events: none;
-}
 :host([dir="top"]) .seg.even:empty::before,
 :host([dir="left"]) .seg.odd:empty::before,
 :host([dir="right"]) .seg.odd:empty::before,
 :host([dir="bottom"]) .seg.even:empty::before {
-  height: calc(max(0px, var(--l)));
-  top: var(--y-);
+  height: calc(max(0px, var(--l)) + 2 * var(--r));
+  top: calc(var(--y-) - var(--r));
   mask-image: linear-gradient(to bottom, black, transparent);
+  mask-size: auto calc(50% - 2 * var(--SHADOWRADIUS));
+  mask-position: left 0 top calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS));
+  mask-repeat: no-repeat;
 }
 :host([dir="top"]) .seg.even:empty::after,
 :host([dir="left"]) .seg.odd:empty::after,
 :host([dir="right"]) .seg.odd:empty::after,
 :host([dir="bottom"]) .seg.even:empty::after {
-  height: calc(max(0px, -1 * var(--l)));
-  top: calc(var(--y-) + var(--l));
+  height: calc(max(0px, -1 * var(--l)) + 2 * var(--r));
+  top: calc(var(--y-) + var(--l) - var(--r));
   mask-image: linear-gradient(to top, black, transparent);
+  mask-size: auto calc(50% - 2 * var(--SHADOWRADIUS));
+  mask-position: left 0 bottom calc(var(--LINERADIUS) + 2 * var(--SHADOWRADIUS));
+  mask-repeat: no-repeat;
 }
 :host([type="dashed"][dir="top"]) .seg.even::after,
 :host([type="dashed"][dir="left"]) .seg.odd::after,
@@ -964,7 +1008,7 @@ ${dot_css}
 :host([type="dashed"][dir="bottom"]) .seg.even:empty::before {
   background-color: initial;
   background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--DASHLENGTH1),
-                                    var(--SHADOWCOLOR) 0, var(--SHADOWCOLOR) var(--DASHLENGTH2));
+                                    transparent 0, transparent var(--DASHLENGTH2));
   background-size: auto var(--DASHLENGTH2);
   background-origin: content-box;
   background-clip: content-box;
@@ -1003,7 +1047,7 @@ ${dot_css}
 }
 </style>
 
-<dragg-able class="dot"></dragg-able>
+<l7-port part="port"></l7-port>
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {
