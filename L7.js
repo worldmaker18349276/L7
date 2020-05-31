@@ -1,6 +1,5 @@
 "use strict";
 
-const MINHEADLENGTH = 20;
 function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
@@ -833,7 +832,8 @@ customElements.define("l7-port", class extends HTMLElement {
                                  : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
   }
   ondragg(event) {
-    if ( this.matches("l7-border > l7-port") && event.target.matches("l7-port, l7-box") ) {
+    if ( this.matches("l7-border > l7-port") && event.target.matches("[part='dot'], l7-port, l7-box") ) {
+      // :host(l7-border > l7-port) [part="dot"],
       // :scope(l7-border > l7-port) l7-port,
       // :scope(l7-border > l7-port) l7-box
 
@@ -934,21 +934,31 @@ template_wire.innerHTML = `
   display: none;
 }
 
-/* CLIP */
-:host([dir="top"]) > .seg::before {
+/* HEAD */
+:host([dir="top"]) .seg.head,
+:host([dir="left"]) .seg.head {
+  --length: calc(-1 * var(--MINHEADLENGTH));
+}
+:host([dir="right"]) .seg.head,
+:host([dir="bottom"]) .seg.head {
+  --length: var(--MINHEADLENGTH);
+}
+:host([dir="top"]) .seg.head::before {
   padding-bottom: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([dir="left"]) > .seg::before {
+:host([dir="left"]) .seg.head::before {
   padding-right: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([dir="right"]) > .seg::before {
+:host([dir="right"]) .seg.head::before {
   padding-left: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
-:host([dir="bottom"]) > .seg::before {
+:host([dir="bottom"]) .seg.head::before {
   padding-top: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
 
 /* HORIZONTAL */
+:host([dir="left"]) .seg.head,
+:host([dir="right"]) .seg.head,
 :host([dir="top"]) .seg.odd,
 :host([dir="left"]) .seg.even,
 :host([dir="right"]) .seg.even,
@@ -957,6 +967,8 @@ template_wire.innerHTML = `
   left: var(--length);
   cursor: ns-resize;
 }
+:host([dir="left"]) .seg.head::before, :host([dir="left"]) .seg.head::after,
+:host([dir="right"]) .seg.head::before, :host([dir="right"]) .seg.head::after,
 :host([dir="top"]) .seg.odd::before, :host([dir="top"]) .seg.odd::after,
 :host([dir="left"]) .seg.even::before, :host([dir="left"]) .seg.even::after,
 :host([dir="right"]) .seg.even::before, :host([dir="right"]) .seg.even::after,
@@ -971,12 +983,9 @@ template_wire.innerHTML = `
 :host([type="dashed"][dir="right"]) .seg.even::after,
 :host([type="dashed"][dir="bottom"]) .seg.odd::after {
   background-color: initial;
-  background-image: linear-gradient(to right, var(--lineColor) 0, var(--DASHLENGTH1),
-                                    transparent 0, transparent var(--DASHLENGTH2));
-  background-size: var(--DASHLENGTH2) auto;
-  background-origin: content-box;
-  background-clip: content-box;
-  background-repeat: repeat-x;
+  background-image: repeating-linear-gradient(to right,
+                      var(--lineColor) 0, var(--DASHLENGTH1),
+                      transparent 0, transparent var(--DASHLENGTH2));
 }
 :host([dir="top"]) .seg.odd:empty::after,
 :host([dir="left"]) .seg.even:empty::after,
@@ -984,14 +993,16 @@ template_wire.innerHTML = `
 :host([dir="bottom"]) .seg.odd:empty::after {
   mask-image: linear-gradient(to right, black var(--r), transparent),
               linear-gradient(to left, black var(--r), transparent);
-  mask-size:  calc(0.5 * var(--length)) auto,
-              calc(-0.5 * var(--length)) auto;
-  mask-position: left var(--r) top 0,
-                 right var(--r) top 0;
+  mask-size:  var(--length) auto,
+              calc(-1 * var(--length)) auto;
+  mask-position: right var(--r) top 0,
+                 left var(--r) top 0;
   mask-repeat: no-repeat, no-repeat;
 }
 
 /* VERTICAL */
+:host([dir="top"]) .seg.head,
+:host([dir="bottom"]) .seg.head,
 :host([dir="top"]) .seg.even,
 :host([dir="left"]) .seg.odd,
 :host([dir="right"]) .seg.odd,
@@ -1000,6 +1011,8 @@ template_wire.innerHTML = `
   top: var(--length);
   cursor: ew-resize;
 }
+:host([dir="top"]) .seg.head::before, :host([dir="top"]) .seg.head::after,
+:host([dir="bottom"]) .seg.head::before, :host([dir="bottom"]) .seg.head::after,
 :host([dir="top"]) .seg.even::before, :host([dir="top"]) .seg.even::after,
 :host([dir="left"]) .seg.odd::before, :host([dir="left"]) .seg.odd::after,
 :host([dir="right"]) .seg.odd::before, :host([dir="right"]) .seg.odd::after,
@@ -1014,12 +1027,9 @@ template_wire.innerHTML = `
 :host([type="dashed"][dir="right"]) .seg.odd::after,
 :host([type="dashed"][dir="bottom"]) .seg.even::after {
   background-color: initial;
-  background-image: linear-gradient(to bottom, var(--lineColor) 0, var(--DASHLENGTH1),
-                                    transparent 0, transparent var(--DASHLENGTH2));
-  background-size: auto var(--DASHLENGTH2);
-  background-origin: content-box;
-  background-clip: content-box;
-  background-repeat: repeat-y;
+  background-image: repeating-linear-gradient(to bottom,
+                      var(--lineColor) 0, var(--DASHLENGTH1),
+                      transparent 0, transparent var(--DASHLENGTH2));
 }
 :host([dir="top"]) .seg.even:empty::after,
 :host([dir="left"]) .seg.odd:empty::after,
@@ -1027,15 +1037,16 @@ template_wire.innerHTML = `
 :host([dir="bottom"]) .seg.even:empty::after {
   mask-image: linear-gradient(to bottom, black var(--r), transparent),
               linear-gradient(to top, black var(--r), transparent);
-  mask-size:  auto calc(0.5 * var(--length)),
-              auto calc(-0.5 * var(--length));
-  mask-position: left 0 top var(--r),
-                 left 0 bottom var(--r);
+  mask-size:  auto var(--length),
+              auto calc(-1 * var(--length));
+  mask-position: left 0 bottom var(--r),
+                 left 0 top var(--r);
   mask-repeat: no-repeat, no-repeat;
 }
 </style>
 
 <slot name="port"></slot>
+<div class="seg head"></div>
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {
@@ -1052,15 +1063,14 @@ customElements.define("l7-wire", class extends HTMLElement {
     if ( old !== value ) {
       if ( name === "style" ) {
         let lengths = this.getLengths();
-
-        let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
+        let [head, ...segments] = this.shadowRoot.querySelectorAll(".seg");
 
         if ( segments.length > lengths.length ) {
           segments[lengths.length].remove();
 
         } else if ( segments.length < lengths.length ) {
-          let last = segments[segments.length-1] || this.shadowRoot;
           for ( let n=segments.length; n<lengths.length; n++ ) {
+            let last = segments[segments.length-1] || head;
             let seg = document.createElement("dragg-able");
             seg.classList.add("seg");
             seg.classList.add(n % 2 === 0 ? "even" : "odd");
@@ -1089,6 +1099,9 @@ customElements.define("l7-wire", class extends HTMLElement {
   get dir() {
     return this.getAttribute("dir");
   }
+  get position() {
+    return this.shadowRoot.querySelector(".head").getBoundingClientRect();
+  }
   get start() {
     if ( this.hasAttribute("from") )
       return document.getElementById(this.getAttribute("from"));
@@ -1102,29 +1115,24 @@ customElements.define("l7-wire", class extends HTMLElement {
       return this;
   }
   get path() {
-    return this.style.getPropertyValue("--path") || this.getDefaultPath();
+    let str = this.style.getPropertyValue("--path") || this.getDefaultPathStyle();
+    let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
+    return Array.from(str.matchAll(regex)).map(res => res[1]);
   }
   set path(path) {
-    this.start.style.setProperty("--path", path);
-    this.end.style.setProperty("--path", path);
+    let str = path.join(" ");
+    this.start.style.setProperty("--path", str);
+    this.end.style.setProperty("--path", str);
   }
   updateDelta() {
     let start = this.start, end = this.end;
     if ( !start || !end )
       return;
 
-    let rect1 = start.getBoundingClientRect();
-    let rect2 = end.getBoundingClientRect();
+    let rect1 = start.position;
+    let rect2 = end.position;
     let deltaX = rect2.left - rect1.left;
     let deltaY = rect2.top - rect1.top;
-    if ( start.dir === "top" )    deltaY += MINHEADLENGTH;
-    if ( start.dir === "left" )   deltaX += MINHEADLENGTH;
-    if ( start.dir === "right" )  deltaX -= MINHEADLENGTH;
-    if ( start.dir === "bottom" ) deltaY -= MINHEADLENGTH;
-    if ( end.dir === "top" )      deltaY -= MINHEADLENGTH;
-    if ( end.dir === "left" )     deltaX -= MINHEADLENGTH;
-    if ( end.dir === "right" )    deltaX += MINHEADLENGTH;
-    if ( end.dir === "bottom" )   deltaY += MINHEADLENGTH;
 
     start.setDelta(deltaX, deltaY);
     end.setDelta(deltaX, deltaY);
@@ -1152,7 +1160,7 @@ customElements.define("l7-wire", class extends HTMLElement {
       });
     }
   }
-  getDefaultPath() {
+  getDefaultPathStyle() {
     let start = this.start, end = this.end;
     if ( !start || !end )
       return "";
@@ -1207,30 +1215,14 @@ customElements.define("l7-wire", class extends HTMLElement {
   }
   getLengths() {
     // parse path as list of lengths
-    let regex = /(.*?[^\s\+\-\*\/,\(])(\s+(?![\+\-\*\/]\s|,|\))|\s*$)/gy;
-    let lengths = Array.from(this.path.matchAll(regex)).map(res => res[1]);
+    let lengths = this.path;
 
     // TODO: deal with fr
 
     // fake percentage unit
     lengths = lengths.map(p => p.replace("%", " * var(--\\%)"));
 
-    // initial/final head length
-    let start = this.start;
-    let end = this.end;
-    if ( lengths[0] ) {
-      if ( start.dir === "top" || start.dir === "left" )
-        lengths[0] = `${lengths[0]} - ${MINHEADLENGTH}px`;
-      else
-        lengths[0] = `${lengths[0]} + ${MINHEADLENGTH}px`;
-    }
-    if ( lengths[lengths.length-1] ) {
-      if ( end.dir === "top" || end.dir === "left" )
-        lengths[lengths.length-1] = `${lengths[lengths.length-1]} + ${MINHEADLENGTH}px`;
-      else
-        lengths[lengths.length-1] = `${lengths[lengths.length-1]} - ${MINHEADLENGTH}px`;
-    }
-
+    // flip order
     if ( this.hasAttribute("from") )
       lengths = lengths.reverse().map(p => `-1 * (${p})`);
 
@@ -1239,45 +1231,32 @@ customElements.define("l7-wire", class extends HTMLElement {
 
   makeArranger(seg) {
     let original_path = this.path;
-    let segments = Array.from(this.shadowRoot.querySelectorAll(".seg"));
+    let segments = Array.from(this.shadowRoot.querySelectorAll(".seg:not(.head)"));
     let index = segments.indexOf(seg);
-    if ( index === 0 || index === segments.length-1 )
-      return (shiftX, shiftY) => original_path;
-
-    // computed lengths
-    let lengths = [];
     let dir = this.dir;
-    for ( let i=0; i<segments.length; i++ ) {
-      if ( (i % 2 === 0) === (dir === "left" || dir === "right") )
-        lengths.push(segments[i].offsetLeft);
-      else
-        lengths.push(segments[i].offsetTop);
-    }
+    let is_horizontal = (index % 2 === 0) === (dir === "left" || dir === "right");
+
+    if ( index === 0 || index === segments.length-1 )
+      return (shiftX, shiftY) => Array.from(original_path);
 
     // computed path
-    let computed_path = Array.from(lengths);
+    let dir1 = this.start.dir;
+    let dir2 = this.end.dir;
+    let deltaX = parseFloat(this.style.getPropertyValue("--deltaX"));
+    let deltaY = parseFloat(this.style.getPropertyValue("--deltaY"));
+    let computed_path = [];
+    for ( let i=0; i<segments.length; i++ ) {
+      if ( (i % 2 === 0) === (dir === "left" || dir === "right") )
+        computed_path.push(segments[i].offsetLeft);
+      else
+        computed_path.push(segments[i].offsetTop);
+    }
     if ( this.hasAttribute("from") ) {
       computed_path = computed_path.reverse().map(p => -p);
       index = computed_path.length-1 - index;
     }
 
-    let start = this.start;
-    let end = this.end;
-    let dir1 = start.dir;
-    let dir2 = end.dir;
-    if ( dir1 === "top" )    computed_path[0] += MINHEADLENGTH;
-    if ( dir1 === "left" )   computed_path[0] += MINHEADLENGTH;
-    if ( dir1 === "right" )  computed_path[0] -= MINHEADLENGTH;
-    if ( dir1 === "bottom" ) computed_path[0] -= MINHEADLENGTH;
-    if ( dir2 === "top" )    computed_path[computed_path.length-1] -= MINHEADLENGTH;
-    if ( dir2 === "left" )   computed_path[computed_path.length-1] -= MINHEADLENGTH;
-    if ( dir2 === "right" )  computed_path[computed_path.length-1] += MINHEADLENGTH;
-    if ( dir2 === "bottom" ) computed_path[computed_path.length-1] += MINHEADLENGTH;
-
-    let deltaX = parseFloat(this.style.getPropertyValue("--deltaX"));
-    let deltaY = parseFloat(this.style.getPropertyValue("--deltaY"));
-
-    // normalized path
+    // normalize path
     let normalized_path = [];
     for ( let i=0; i<computed_path.length; i++ ) {
       if ( (i % 2 === 0) === (dir1 === "left" || dir1 === "right") )
@@ -1286,24 +1265,24 @@ customElements.define("l7-wire", class extends HTMLElement {
         normalized_path.push(`${100 * computed_path[i] / deltaY}%`);
     }
 
+    // compute limit
     let min = -Infinity,
         max = +Infinity;
     if ( index === 1 && (dir1 === "top" || dir1 === "left") )
-      max = Math.min(max, -computed_path[0]);
+      max = Math.min(max, -computed_path[index-1]);
     if ( index === 1 && (dir1 === "bottom" || dir1 === "right") )
-      min = Math.max(min, -computed_path[0]);
+      min = Math.max(min, -computed_path[index-1]);
     if ( index === computed_path.length-2 && (dir2 === "top" || dir2 === "left") )
-      max = Math.min(max, computed_path[computed_path.length-1]);
+      max = Math.min(max, computed_path[index+1]);
     if ( index === computed_path.length-2 && (dir2 === "bottom" || dir2 === "right") )
-      min = Math.max(min, computed_path[computed_path.length-1]);
-
-    let is_horizontal = (index % 2 === 0) === (dir1 === "left" || dir1 === "right");
+      min = Math.max(min, computed_path[index+1]);
 
     return (shiftX, shiftY) => {
       if ( shiftX === undefined || shiftY === undefined )
-        return original_path;
+        return Array.from(original_path);
 
       let path = Array.from(normalized_path);
+
       if ( is_horizontal ) {
         shiftY = Math.max(min, Math.min(shiftY, max));
         path[index-1] = `${100 * (computed_path[index-1] + shiftY) / deltaY}%`;
@@ -1314,7 +1293,7 @@ customElements.define("l7-wire", class extends HTMLElement {
         path[index+1] = `${100 * (computed_path[index+1] - shiftX) / deltaX}%`;
       }
 
-      return path.join(" ");
+      return path;
     };
   }
   ondragg(event) {

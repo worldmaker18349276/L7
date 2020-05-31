@@ -8,6 +8,7 @@ body {
   --HOVERRADIUS     : calc(var(--SCALE) * 3px);
   --DASHLENGTH1     : calc(var(--SCALE) * 7px);
   --DASHLENGTH2     : calc(var(--SCALE) * 10px);
+  --MINHEADLENGTH   : calc(var(--SCALE) * 10px);
   --SHADOWCOLOR     : white;
   --STROKECOLOR     : DimGray;
   --HOVERCOLOR      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */
