@@ -1,6 +1,6 @@
 "use strict";
 
-const MINHEADLENGTH = 10;
+const MINHEADLENGTH = 20;
 function modifiersOf(event) {
   return (!!event.altKey) * 1 + (!!event.shiftKey) * 2 + (!!event.ctrlKey) * 4 + (!!event.metaKey) * 8;
 }
@@ -162,7 +162,7 @@ template_box.innerHTML = `
   --port-horizontal: 1;
   --port-vertical: 1;
 }
-.corner::slotted(:hover) {
+.corner::slotted(l7-port:hover) {
   z-index: auto;
 }
 .corner[name*="top"]::slotted(*) {
@@ -340,35 +340,42 @@ customElements.define("l7-box", class extends HTMLElement {
   }
   ondragg(event) {
     let mode;
-    if ( event.target.matches("[part='background']") && event.target.getRootNode() === this.shadowRoot ) {
-      // :host(:not([dir])) > [part="background"]
+    if ( event.target.matches("[part='background'], l7-box") ) {
+      // :host(:not([dir])) [part="background"],
+      // :scope(:not([dir])) l7-box
 
       if ( this.dir )
         return;
 
       mode = ["top", "bottom", "left", "right"];
 
-    } else if ( event.target.matches("l7-border") && event.target.parentNode === this ) {
-      // :scope > l7-border
+    } else if ( event.target.matches("l7-border") ) {
+      // :scope(:not([slot])) l7-border,
+      // :scope([slot="Y-X"]) l7-border:not([slot="X"]):not([slot="Y"])
+
+      if ( this.slot && this.slot.includes(event.target.slot) )
+        return;
 
       mode = [event.target.slot];
 
     } else if ( event.target.matches("l7-port") ) {
-      // l7-box:not([dir="bottom-right"]) l7-port[slot="top-left"]
-      // l7-box:not([dir="bottom-left"]) l7-port[slot="top-right"]
-      // l7-box:not([dir="top-right"]) l7-port[slot="bottom-left"]
-      // l7-box:not([dir="top-left"]) l7-port[slot="bottom-right"]
+      // l7-box:not([dir="Y-X"]) > l7-port[slot="Y'-X'"]
+      // l7-box:not([dir="Y-X"]) > [slot="Y'-X'"] l7-port
 
-      if ( this.dir === "top-left" && event.target.matches("[slot='bottom-right']") )
-        return;
-      if ( this.dir === "top-right" && event.target.matches("[slot='bottom-left']") )
-        return;
-      if ( this.dir === "bottom-left" && event.target.matches("[slot='top-right']") )
-        return;
-      if ( this.dir === "bottom-right" && event.target.matches("[slot='top-left']") )
+      let dir, rid;
+      if ( this.querySelector(":scope > [slot='top-left']").contains(event.target) )
+        [dir, rid] = ["top-left", "bottom-right"];
+      if ( this.querySelector(":scope > [slot='top-right']").contains(event.target) )
+        [dir, rid] = ["top-right", "bottom-left"];
+      if ( this.querySelector(":scope > [slot='bottom-left']").contains(event.target) )
+        [dir, rid] = ["bottom-left", "top-right"];
+      if ( this.querySelector(":scope > [slot='bottom-right']").contains(event.target) )
+        [dir, rid] = ["bottom-right", "top-left"];
+
+      if ( this.dir === rid )
         return;
 
-      mode = event.target.slot.split("-");
+      mode = dir.split("-");
 
     } else {
       return;
@@ -826,7 +833,10 @@ customElements.define("l7-port", class extends HTMLElement {
                                  : `${100*Math.max(0, Math.min(top+shiftY, parentHeight))/parentHeight}%`;
   }
   ondragg(event) {
-    if ( this.matches("l7-border > l7-port") ) {
+    if ( this.matches("l7-border > l7-port") && event.target.matches("l7-port, l7-box") ) {
+      // :scope(l7-border > l7-port) l7-port,
+      // :scope(l7-border > l7-port) l7-box
+
       event.stopPropagation();
       event.detail.register(this.onmove(this.parentNode.slot));
     }
@@ -876,11 +886,13 @@ template_wire.innerHTML = `
 }
 
 /* PORT */
-[part="port"] {
+[name="port"] {
   --port-shadowVisible: 0;
 }
-:host(:hover) [part="port"] {
+:host(:hover) [name="port"] {
   --port-shadowVisible: initial;
+}
+[name="port"]::slotted(:hover) {
   z-index: auto;
 }
 
@@ -1023,7 +1035,7 @@ template_wire.innerHTML = `
 }
 </style>
 
-<l7-port part="port"></l7-port>
+<slot name="port"></slot>
 `;
 customElements.define("l7-wire", class extends HTMLElement {
   constructor() {

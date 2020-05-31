@@ -1,12 +1,4 @@
-.root {
-  position: absolute;
-  left: 5vw;
-  top: 5vh;
-  width: 90vw;
-  height: 90vh;
-  overflow: scroll;
-  border: solid;
-  resize: both;
+body {
   background: pink;
 
   --SCALE: 2;
