@@ -95,13 +95,32 @@ customElements.define("dragg-able", class extends HTMLElement {
 //   4: content
 //   5: hovered
 
+// ########   #######  ##     ## 
+// ##     ## ##     ##  ##   ##  
+// ##     ## ##     ##   ## ##   
+// ########  ##     ##    ###    
+// ##     ## ##     ##   ## ##   
+// ##     ## ##     ##  ##   ##  
+// ########   #######  ##     ## 
+
 const template_box = document.createElement("template");
 template_box.innerHTML = `
+<dragg-able part="background"></dragg-able>
+<slot class="edge" name="top"></slot>
+<slot class="edge" name="left"></slot>
+<slot class="edge" name="right"></slot>
+<slot class="edge" name="bottom"></slot>
+<slot class="corner" name="top-left"></slot>
+<slot class="corner" name="top-right"></slot>
+<slot class="corner" name="bottom-left"></slot>
+<slot class="corner" name="bottom-right"></slot>
+<slot class="contents"></slot>
 <style>
 :host {
   position: absolute;
   width:  var(--width);
   height: var(--height);
+
   pointer-events: none;
   z-index: 4;
 }
@@ -124,23 +143,17 @@ template_box.innerHTML = `
 :host([dir*="bottom"]) {
   top: var(--y);
 }
-.edge, .corner, .contents {
-  /* reset controlled variables */
-  --port-shadowVisible: initial;
-  --port-dotVisible: initial;
-  --port-cursor: initial;
-  --port-dotColor: initial;
-  --port-filledColor: initial;
-  --port-horizontal: initial;
-  --port-vertical: initial;
-  --border-lineColor: initial;
-  --border-clipTopLeft: initial;
-  --border-clipTopRight: initial;
-  --border-clipBottomLeft: initial;
-  --border-clipBottomRight: initial;
-}
 
-/* background */
+/***********************************
+ ##     ## #### ######## ##      ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ######   ##  ##  ## 
+  ##   ##   ##  ##       ##  ##  ## 
+   ## ##    ##  ##       ##  ##  ## 
+    ###    #### ########  ###  ###  
+***********************************/
+
 [part="background"] {
   position: absolute;
   top: 0px;
@@ -155,7 +168,30 @@ template_box.innerHTML = `
   /* outline-offset: -1px; */
 }
 
-/* CORNERS */
+/******************************************************************
+  ######   #######  ########  ##    ## ######## ########   ######  
+ ##    ## ##     ## ##     ## ###   ## ##       ##     ## ##    ## 
+ ##       ##     ## ##     ## ####  ## ##       ##     ## ##       
+ ##       ##     ## ########  ## ## ## ######   ########   ######  
+ ##       ##     ## ##   ##   ##  #### ##       ##   ##         ## 
+ ##    ## ##     ## ##    ##  ##   ### ##       ##    ##  ##    ## 
+  ######   #######  ##     ## ##    ## ######## ##     ##  ######  
+******************************************************************/
+.corner {
+  /* reset all controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
+}
 .corner {
   --port-dotVisible: 0;
   --port-horizontal: 1;
@@ -188,6 +224,8 @@ template_box.innerHTML = `
 .corner[name="bottom-right"] {
   --port-cursor: se-resize;
 }
+
+/* proxy */
 :host([dir="bottom-right"]) .corner[name="top-left"],
 :host([dir="bottom-left"]) .corner[name="top-right"],
 :host([dir="top-right"]) .corner[name="bottom-left"],
@@ -205,7 +243,30 @@ template_box.innerHTML = `
   --port-shadowVisible: initial;
 }
 
-/* EDGES */
+/***********************************************
+ ######## ########   ######   ########  ######  
+ ##       ##     ## ##    ##  ##       ##    ## 
+ ##       ##     ## ##        ##       ##       
+ ######   ##     ## ##   #### ######    ######  
+ ##       ##     ## ##    ##  ##             ## 
+ ##       ##     ## ##    ##  ##       ##    ## 
+ ######## ########   ######   ########  ######  
+***********************************************/
+.edge {
+  /* reset all controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
+}
 .edge {
   --border-clipTopLeft: inherit;
   --border-clipTopRight: inherit;
@@ -215,18 +276,32 @@ template_box.innerHTML = `
 :host(:hover) .edge {
   --border-lineColor: var(--HOVERCOLOR);
 }
-</style>
 
-<dragg-able part="background"></dragg-able>
-<slot class="edge" name="top"></slot>
-<slot class="edge" name="left"></slot>
-<slot class="edge" name="right"></slot>
-<slot class="edge" name="bottom"></slot>
-<slot class="corner" name="top-left"></slot>
-<slot class="corner" name="top-right"></slot>
-<slot class="corner" name="bottom-left"></slot>
-<slot class="corner" name="bottom-right"></slot>
-<slot class="contents"></slot>
+/*************************************************************************
+  ######   #######  ##    ## ######## ######## ##    ## ########  ######  
+ ##    ## ##     ## ###   ##    ##    ##       ###   ##    ##    ##    ## 
+ ##       ##     ## ####  ##    ##    ##       ####  ##    ##    ##       
+ ##       ##     ## ## ## ##    ##    ######   ## ## ##    ##     ######  
+ ##       ##     ## ##  ####    ##    ##       ##  ####    ##          ## 
+ ##    ## ##     ## ##   ###    ##    ##       ##   ###    ##    ##    ## 
+  ######   #######  ##    ##    ##    ######## ##    ##    ##     ######  
+*************************************************************************/
+.contents {
+  /* reset all controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
+}
+</style>
 `;
 customElements.define("l7-box", class extends HTMLElement {
   constructor() {
@@ -412,46 +487,54 @@ customElements.define("l7-box", class extends HTMLElement {
   }
 });
 
+
+// ########   #######  ########  ########  ######## ########  
+// ##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+// ##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+// ########  ##     ## ########  ##     ## ######   ########  
+// ##     ## ##     ## ##   ##   ##     ## ##       ##   ##   
+// ##     ## ##     ## ##    ##  ##     ## ##       ##    ##  
+// ########   #######  ##     ## ########  ######## ##     ## 
+
 const template_border = document.createElement("template");
 template_border.innerHTML = `
+<dragg-able part="line"><div class="handle"></div></dragg-able>
+<slot class="ports"></slot>
 <style>
 :host {
-  --shift: calc(min(100%, 2 * var(--order, 0) * var(--HOVERRADIUS)));
-
   position: absolute;
   width: 100%;
   height: 100%;
+
   pointer-events: none;
   z-index: auto;
 
-  /* controlled variables:
-  --border-lineColor
-  --border-clipTopLeft
-  --border-clipTopRight
-  --border-clipBottomLeft
-  --border-clipBottomRight
-  */
+  --shift: calc(min(100%, 2 * var(--order, 0) * var(--HOVERRADIUS)));
 }
 :host(:hover) {
   z-index: 5;
 }
-.ports {
-  /* reset controlled variables */
-  --port-shadowVisible: initial;
-  --port-dotVisible: initial;
-  --port-cursor: initial;
-  --port-dotColor: initial;
-  --port-filledColor: initial;
-  --port-horizontal: initial;
-  --port-vertical: initial;
-  --border-lineColor: initial;
-  --border-clipTopLeft: initial;
-  --border-clipTopRight: initial;
-  --border-clipBottomLeft: initial;
-  --border-clipBottomRight: initial;
+
+/***********************************
+ ##     ## #### ######## ##      ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ######   ##  ##  ## 
+  ##   ##   ##  ##       ##  ##  ## 
+   ## ##    ##  ##       ##  ##  ## 
+    ###    #### ########  ###  ###  
+***********************************/
+
+[part="line"] {
+  /* controlled variables */
+  --border-lineColor: inherit;
+  --border-clipTopLeft: inherit;
+  --border-clipTopRight: inherit;
+  --border-clipBottomLeft: inherit;
+  --border-clipBottomRight: inherit;
 }
 
-/* POSITION */
+/* position */
 [part="line"] {
   position: absolute;
 }
@@ -484,7 +567,7 @@ template_border.innerHTML = `
   cursor: e-resize;
 }
 
-/* VIEW */
+/* shadow, stroke, handle */
 [part="line"]:hover {
   --border-lineColor: var(--FOCUSCOLOR);
 }
@@ -533,7 +616,7 @@ template_border.innerHTML = `
   right: calc(-1 * var(--HOVERRADIUS));
 }
 
-/* CLIP */
+/* clip */
 [part="line"]::before {
   --c: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
 }
@@ -554,7 +637,30 @@ template_border.innerHTML = `
   padding-bottom: calc(var(--border-clipBottomRight, 0) * var(--c));
 }
 
-/* PORTS */
+/************************************************
+ ########   #######  ########  ########  ######  
+ ##     ## ##     ## ##     ##    ##    ##    ## 
+ ##     ## ##     ## ##     ##    ##    ##       
+ ########  ##     ## ########     ##     ######  
+ ##        ##     ## ##   ##      ##          ## 
+ ##        ##     ## ##    ##     ##    ##    ## 
+ ##         #######  ##     ##    ##     ######  
+************************************************/
+.ports {
+  /* reset all controlled variables */
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+  --port-horizontal: initial;
+  --port-vertical: initial;
+  --border-lineColor: initial;
+  --border-clipTopLeft: initial;
+  --border-clipTopRight: initial;
+  --border-clipBottomLeft: initial;
+  --border-clipBottomRight: initial;
+}
 .ports {
   --border-lineColor: inherit;
   --port-dotColor: var(--border-lineColor);
@@ -562,6 +668,8 @@ template_border.innerHTML = `
 [part="line"]:hover ~ .ports {
   --port-dotColor: var(--FOCUSCOLOR);
 }
+
+/* position */
 :host([slot="top"]) .ports::slotted(*) {
   --x: calc(clamp(0%, var(--offset), 100%));
   --y: var(--shift);
@@ -583,9 +691,6 @@ template_border.innerHTML = `
   --port-vertical: 1;
 }
 </style>
-
-<dragg-able part="line"><div class="handle"></div></dragg-able>
-<slot class="ports"></slot>
 `;
 customElements.define("l7-border", class extends HTMLElement {
   constructor() {
@@ -688,38 +793,71 @@ customElements.define("l7-border", class extends HTMLElement {
   }
 });
 
+
+// ########   #######  ########  ######## 
+// ##     ## ##     ## ##     ##    ##    
+// ##     ## ##     ## ##     ##    ##    
+// ########  ##     ## ########     ##    
+// ##        ##     ## ##   ##      ##    
+// ##        ##     ## ##    ##     ##    
+// ##         #######  ##     ##    ##    
+
 const template_port = document.createElement("template");
 template_port.innerHTML = `
+<dragg-able part="dot"><div class="handle"></div></dragg-able>
+<slot class="contents"></slot>
 <style>
 :host {
   position: absolute;
   width: 100%;
   height: 100%;
+
   pointer-events: none;
   z-index: auto;
-
-  /* controlled variables:
-  --port-shadowVisible
-  --port-dotVisible
-  --port-cursor
-  --port-dotColor
-  --port-filledColor
-  --port-horizontal
-  --port-vertical
-  */
 }
 :host(:hover) {
   z-index: 5;
 }
 
-/* VIEW */
+/***********************************
+ ##     ## #### ######## ##      ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ##       ##  ##  ## 
+ ##     ##  ##  ######   ##  ##  ## 
+  ##   ##   ##  ##       ##  ##  ## 
+   ## ##    ##  ##       ##  ##  ## 
+    ###    #### ########  ###  ###  
+***********************************/
+
+/* controlled variables */
+[part="dot"] {
+  --port-shadowVisible: inherit;
+  --port-dotVisible: inherit;
+  --port-cursor: inherit;
+  --port-dotColor: inherit;
+  --port-filledColor: inherit;
+  --port-horizontal: inherit;
+  --port-vertical: inherit;
+  --x: inherit;
+  --y: inherit;
+}
+
+/* position */
 [part="dot"] {
   position: absolute;
   left: var(--x);
   top: var(--y);
+  width: 0px;
+  height: 0px;
+
   cursor: var(--port-cursor, pointer);
 }
-[part="dot"]::before, [part="dot"]::after {
+
+/* shadow, stroke, handle */
+[part="dot"]:hover {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+[part="dot"]::before, [part="dot"]::after, [part="dot"] .handle {
   content: "";
   display: block;
   position: absolute;
@@ -732,56 +870,74 @@ template_port.innerHTML = `
   ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
   background: content-box var(--SHADOWCOLOR);
   pointer-events: none;
-  opacity: var(--port-shadowVisible, var(--port-dotVisible, 1));
   z-index: 1;
+
+  opacity: var(--port-shadowVisible, var(--port-dotVisible, 1));
 }
 [part="dot"]::after {
-  box-sizing: border-box;
-  ---r: calc(-1 * var(--HOVERRADIUS));
-  border: calc(var(--HOVERRADIUS) - var(--DOTRADIUS)) solid transparent;
+  ---r: calc(-1 * var(--DOTRADIUS));
   background: content-box var(--port-dotColor, var(--STROKECOLOR));
+  pointer-events: none;
+  z-index: 3;
+
   outline: var(--LINERADIUS) solid var(--port-filledColor, var(--port-dotColor, var(--STROKECOLOR)));
   outline-offset: var(---r);
+
   opacity: var(--port-dotVisible, 1);
+}
+[part="dot"] .handle {
+  ---r: calc(-1 * var(--HOVERRADIUS));
   pointer-events: auto;
   z-index: 3;
+
+  /* outline: 1px dashed red; */
+  /* outline-offset: -1px; */
 }
 
-/* CLIP */
-:host(:not(:hover)) ::slotted([dir="top-left"]) {
-  --border-clipBottomRight: 1;
-  --border-clipBottomLeft: var(--port-horizontal, 0);
-  --border-clipTopRight: var(--port-vertical, 0);
-}
-:host(:not(:hover)) ::slotted([dir="top-right"]) {
-  --border-clipBottomLeft: 1;
-  --border-clipBottomRight: var(--port-horizontal, 0);
-  --border-clipTopLeft: var(--port-vertical, 0);
-}
-:host(:not(:hover)) ::slotted([dir="bottom-left"]) {
-  --border-clipTopRight: 1;
-  --border-clipTopLeft: var(--port-horizontal, 0);
-  --border-clipBottomRight: var(--port-vertical, 0);
-}
-:host(:not(:hover)) ::slotted([dir="bottom-right"]) {
-  --border-clipTopLeft: 1;
-  --border-clipTopRight: var(--port-horizontal, 0);
-  --border-clipBottomLeft: var(--port-vertical, 0);
-}
-
-[part="dot"]:hover, [part="dot"]:hover ~ .contents {
-  --port-dotColor: var(--FOCUSCOLOR);
-}
+/* dot type */
 :host([type="hollow"]) {
   --port-filledColor: var(--SHADOWCOLOR);
 }
 :host([type="hidden"]) {
   --port-dotVisible: 0;
 }
-</style>
 
-<dragg-able part="dot"></dragg-able>
-<slot class="contents"></slot>
+/*************************************************************************
+  ######   #######  ##    ## ######## ######## ##    ## ########  ######  
+ ##    ## ##     ## ###   ##    ##    ##       ###   ##    ##    ##    ## 
+ ##       ##     ## ####  ##    ##    ##       ####  ##    ##    ##       
+ ##       ##     ## ## ## ##    ##    ######   ## ## ##    ##     ######  
+ ##       ##     ## ##  ####    ##    ##       ##  ####    ##          ## 
+ ##    ## ##     ## ##   ###    ##    ##       ##   ###    ##    ##    ## 
+  ######   #######  ##    ##    ##    ######## ##    ##    ##     ######  
+*************************************************************************/
+
+[part="dot"]:hover ~ .contents {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+
+/* clip */
+:host(:not(:hover)) .contents::slotted([dir="top-left"]) {
+  --border-clipBottomRight: 1;
+  --border-clipBottomLeft: var(--port-horizontal, 0);
+  --border-clipTopRight: var(--port-vertical, 0);
+}
+:host(:not(:hover)) .contents::slotted([dir="top-right"]) {
+  --border-clipBottomLeft: 1;
+  --border-clipBottomRight: var(--port-horizontal, 0);
+  --border-clipTopLeft: var(--port-vertical, 0);
+}
+:host(:not(:hover)) .contents::slotted([dir="bottom-left"]) {
+  --border-clipTopRight: 1;
+  --border-clipTopLeft: var(--port-horizontal, 0);
+  --border-clipBottomRight: var(--port-vertical, 0);
+}
+:host(:not(:hover)) .contents::slotted([dir="bottom-right"]) {
+  --border-clipTopLeft: 1;
+  --border-clipTopRight: var(--port-horizontal, 0);
+  --border-clipBottomLeft: var(--port-vertical, 0);
+}
+</style>
 `;
 customElements.define("l7-port", class extends HTMLElement {
   constructor() {
@@ -866,6 +1022,15 @@ customElements.define("l7-port", class extends HTMLElement {
     }
   }
 });
+
+
+// ##      ## #### ########  ######## 
+// ##  ##  ##  ##  ##     ## ##       
+// ##  ##  ##  ##  ##     ## ##       
+// ##  ##  ##  ##  ########  ######   
+// ##  ##  ##  ##  ##   ##   ##       
+// ##  ##  ##  ##  ##    ##  ##       
+//  ###  ###  #### ##     ## ######## 
 
 const template_wire = document.createElement("template");
 template_wire.innerHTML = `
