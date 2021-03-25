@@ -177,6 +177,7 @@ template_box.innerHTML = `
  ##    ## ##     ## ##    ##  ##   ### ##       ##    ##  ##    ## 
   ######   #######  ##     ## ##    ## ######## ##     ##  ######  
 ******************************************************************/
+
 .corner {
   /* reset all controlled variables */
   --port-shadowVisible: initial;
@@ -197,7 +198,7 @@ template_box.innerHTML = `
   --port-horizontal: 1;
   --port-vertical: 1;
 }
-.corner::slotted(l7-port:hover) {
+.corner::slotted(*:hover) {
   z-index: auto;
 }
 .corner[name*="top"]::slotted(*) {

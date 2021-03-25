@@ -1,0 +1,485 @@
+body {
+  background: pink;
+
+  --SCALE: 1;
+  --LINERADIUS      : calc(var(--SCALE) * 1px);
+  --DOTRADIUS       : calc(var(--SCALE) * 2px);
+  --SHADOWRADIUS    : calc(var(--SCALE) * 1px);
+  --HOVERRADIUS     : calc(var(--SCALE) * 3px);
+  --DASHLENGTH1     : calc(var(--SCALE) * 3px);
+  --DASHLENGTH2     : calc(var(--SCALE) * 5px);
+  --MINHEADLENGTH   : calc(var(--SCALE) * 5px);
+  --SHADOWCOLOR     : white;
+  --STROKECOLOR     : DimGray;
+  --HOVERCOLOR      : rgb(137, 137, 137); /* 0.5 * DimGray + 0.5 * DarkGray */
+  --FOCUSCOLOR      : DarkGray;
+  --BGCOLOR         : rgba(245, 245, 245, 0.8); /* WhiteSmoke */
+}
+
+$sides: top, right, bottom, left;
+$corners: top-left, top-right, bottom-left, bottom-right;
+@function turn-right($side) {
+  @if $side == top {
+    @return right;
+  } @else if $side == right {
+    @return bottom;
+  } @else if $side == bottom {
+    @return left;
+  } @else if $side == left {
+    @return top;
+  } @else if $side == top-left {
+    @return top-right;
+  } @else if $side == top-right {
+    @return bottom-right;
+  } @else if $side == bottom-right {
+    @return bottom-left;
+  } @else if $side == bottom-left {
+    @return top-left;
+  }
+}
+@function turn-left($side) {
+  @if $side == top {
+    @return left;
+  } @else if $side == right {
+    @return top;
+  } @else if $side == bottom {
+    @return right;
+  } @else if $side == left {
+    @return bottom;
+  } @else if $side == top-left {
+    @return bottom-left;
+  } @else if $side == top-right {
+    @return top-left;
+  } @else if $side == bottom-right {
+    @return top-right;
+  } @else if $side == bottom-left {
+    @return bottom-right;
+  }
+}
+@function opposite-of($side) {
+  @if $side == top {
+    @return bottom;
+  } @else if $side == right {
+    @return left;
+  } @else if $side == bottom {
+    @return top;
+  } @else if $side == left {
+    @return right;
+  } @else if $side == top-left {
+    @return bottom-right;
+  } @else if $side == top-right {
+    @return bottom-left;
+  } @else if $side == bottom-right {
+    @return top-left;
+  } @else if $side == bottom-left {
+    @return top-right;
+  }
+}
+@function size-along($side) {
+  @if $side == top {
+    @return height;
+  } @else if $side == right {
+    @return width;
+  } @else if $side == bottom {
+    @return width;
+  } @else if $side == left {
+    @return height;
+  }
+}
+@function resize-cursor($side) {
+  @if $side == top {
+    @return n-resize;
+  } @else if $side == right {
+    @return e-resize;
+  } @else if $side == bottom {
+    @return s-resize;
+  } @else if $side == left {
+    @return w-resize;
+  } @else if $side == top-left {
+    @return nw-resize;
+  } @else if $side == top-right {
+    @return ne-resize;
+  } @else if $side == bottom-right {
+    @return se-resize;
+  } @else if $side == bottom-left {
+    @return sw-resize;
+  }
+}
+
+$background-layer:  auto;
+$shadow-layer:  1;
+$line-layer:    2;
+$dot-layer:     3;
+$content-layer: 4;
+$hovered-layer: 5;
+
+@mixin part-layer($first-layer, $second-layer) {
+  &::before {
+    position: absolute;
+    z-index: $first-layer;
+    pointer-events: none;
+  }
+  &::after {
+    position: absolute;
+    z-index: $second-layer;
+    pointer-events: none;
+  }
+  & > .handle {
+    position: absolute;
+    z-index: $second-layer;
+  }
+}
+
+@mixin box($pad, $color) {
+  position: absolute;
+  box-sizing: border-box;
+  top: $pad;
+  left: $pad;
+  right: $pad;
+  bottom: $pad;
+  background: content-box $color;
+}
+
+@mixin set-port($shadowVisible: initial,
+                $dotVisible:    initial,
+                $cursor:        initial,
+                $dotColor:      initial,
+                $filledColor:   initial) {
+  --port-shadowVisible: $shadowVisible;
+  --port-dotVisible:    $dotVisible;
+  --port-cursor:        $cursor;
+  --port-dotColor:      $dotColor;
+  --port-filledColor:   $filledColor;
+}
+
+// ##          ###    ##    ## ######## ########  
+// ##         ## ##    ##  ##  ##       ##     ## 
+// ##        ##   ##    ####   ##       ##     ## 
+// ##       ##     ##    ##    ######   ########  
+// ##       #########    ##    ##       ##   ##   
+// ##       ##     ##    ##    ##       ##    ##  
+// ######## ##     ##    ##    ######## ##     ## 
+
+.box {
+  position: absolute;
+  z-index: $content-layer;
+  pointer-events: none;
+
+  &:hover {
+    z-index: $hovered-layer;
+  }
+
+  & > .part {
+    position: absolute;
+    z-index: $background-layer;
+    pointer-events: auto;
+  }
+}
+
+.border {
+  position: absolute;
+  z-index: auto;
+  pointer-events: none;
+
+  &:hover {
+    z-index: $hovered-layer;
+  }
+
+  & > .part {
+    position: absolute;
+    z-index: auto;
+    pointer-events: none;
+    @include part-layer($shadow-layer, $line-layer);
+  }
+}
+
+.port {
+  position: absolute;
+  z-index: auto;
+  pointer-events: none;
+
+  &:hover {
+    z-index: $hovered-layer;
+  }
+
+  & > .part {
+    position: absolute;
+    z-index: auto;
+    pointer-events: none;
+    @include part-layer($shadow-layer, $dot-layer);
+  }
+}
+
+
+/* 
+@mixin hightlight-handle($color) {
+  outline: 1px dashed $color;
+  outline-offset: -1px;
+}
+.box > .part {
+  @include hightlight-handle(yellow);
+}
+.port > .part > .handle {
+  @include hightlight-handle(red);
+}
+.border > .part > .handle {
+  @include hightlight-handle(blue);
+}
+*/
+
+
+// ########   #######  ########  ######## 
+// ##     ## ##     ## ##     ##    ##    
+// ##     ## ##     ## ##     ##    ##    
+// ########  ##     ## ########     ##    
+// ##        ##     ## ##   ##      ##    
+// ##        ##     ## ##    ##     ##    
+// ##         #######  ##     ##    ##    
+
+.port {
+  width: 100%;
+  height: 100%;
+
+  /* position */
+  & > .part {
+    left: var(--x);
+    top: var(--y);
+    width: 0px;
+    height: 0px;
+  }
+}
+
+/* shadow, stroke, handle */
+.port > .part:hover {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+.port > .part {
+  cursor: var(--port-cursor, pointer);
+}
+.port > .part::before {
+  content: "";
+  display: block;
+  @include box(calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS))), var(--SHADOWCOLOR));
+  opacity: var(--port-shadowVisible, var(--port-dotVisible, 1));
+}
+.port > .part::after {
+  content: "";
+  display: block;
+  @include box(calc(-1 * var(--DOTRADIUS)), var(--port-dotColor, var(--STROKECOLOR)));
+  outline: var(--LINERADIUS) solid var(--port-filledColor, var(--port-dotColor, var(--STROKECOLOR)));
+  outline-offset: calc(-1 * var(--DOTRADIUS));
+  opacity: var(--port-dotVisible, 1);
+}
+.port > .part > .handle {
+  @include box(calc(-1 * var(--HOVERRADIUS)), transparent);
+}
+
+/* dot type */
+.port[type="hollow"] {
+  --port-filledColor: var(--SHADOWCOLOR);
+}
+.port[type="hidden"] {
+  --port-dotVisible: 0;
+}
+
+
+// ########   #######  ########  ########  ######## ########  
+// ##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+// ##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+// ########  ##     ## ########  ##     ## ######   ########  
+// ##     ## ##     ## ##   ##   ##     ## ##       ##   ##   
+// ##     ## ##     ## ##    ##  ##     ## ##       ##    ##  
+// ########   #######  ##     ## ########  ######## ##     ## 
+
+.border {
+  width:  100%;
+  height: 100%;
+  --shift: calc(min(100%, 2 * var(--order, 0) * var(--HOVERRADIUS)));
+
+  /* position */
+  @each $side in $sides {
+    &[dir="#{$side}"] > .part {
+      #{turn-left($side)}:  0px;
+      #{turn-right($side)}: 0px;
+      #{size-along($side)}: 0px;
+      #{side}: var(--shift);
+      cursor: resize-cursor($side);
+    }
+  }
+  &[dir="top"] > .port {
+    --x: calc(clamp(0%, var(--offset), 100%));
+    --y: var(--shift);
+  }
+  &[dir="bottom"] > .port {
+    --x: calc(clamp(0%, var(--offset), 100%));
+    --y: calc(100% - var(--shift));
+  }
+  &[dir="left"] > .port {
+    --x: var(--shift);
+    --y: calc(clamp(0%, var(--offset), 100%));
+  }
+  &[dir="right"] > .port {
+    --x: calc(100% - var(--shift));
+    --y: calc(clamp(0%, var(--offset), 100%));
+  }
+}
+
+/* shadow, stroke, handle */
+.border > .part {
+  &::before {
+    content: "";
+    display: block;
+    @include box(calc(-1 * (var(--LINERADIUS) + var(--SHADOWRADIUS))), var(--SHADOWCOLOR));
+  }
+  &::after {
+    content: "";
+    display: block;
+    @include box(calc(-1 * var(--LINERADIUS)), var(--STROKECOLOR));
+  }
+  &:hover::after {
+    background-color: var(--FOCUSCOLOR);
+  }
+}
+@each $side in $sides {
+  .border[dir="#{$side}"] > .part > .handle {
+    position: absolute;
+    #{turn-left($side)}:  var(--HOVERRADIUS);
+    #{turn-right($side)}: var(--HOVERRADIUS);
+    #{$side}:              calc(-1 * var(--HOVERRADIUS));
+    #{opposite-of($side)}: calc(-1 * var(--HOVERRADIUS));
+  }
+}
+
+.border > .port {
+  @include set-port($dotColor: var(--border-lineColor));
+}
+.border > .part:hover ~ .port {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+
+.port > .part:hover ~ * {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+
+
+
+// ########   #######  ##     ## 
+// ##     ## ##     ##  ##   ##  
+// ##     ## ##     ##   ## ##   
+// ########  ##     ##    ###    
+// ##     ## ##     ##   ## ##   
+// ##     ## ##     ##  ##   ##  
+// ########   #######  ##     ## 
+
+.box {
+  width:  var(--width);
+  height: var(--height);
+
+  &:not([dir]) {
+    left: var(--left);
+    top:  var(--top);
+  }
+  &[dir*="top"] {
+    bottom: calc(100% - var(--y));
+  }
+  &[dir*="left"] {
+    right: calc(100% - var(--x));
+  }
+  &[dir*="right"] {
+    left: var(--x);
+  }
+  &[dir*="bottom"] {
+    top: var(--y);
+  }
+
+  /* position */
+  & > .part {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    background: var(--BGCOLOR);
+    cursor: move;
+  }
+  & > .port[dir*="top"] {
+    --y: 0%;
+  }
+  & > .port[dir*="left"] {
+    --x: 0%;
+  }
+  & > .port[dir*="right"] {
+    --x: 100%;
+  }
+  & > .port[dir*="bottom"] {
+    --y: 100%;
+  }
+
+  & > .port {
+    @include set-port($dotVisible: 0);
+    &:hover {
+      z-index: auto;
+    }
+  }
+  @each $corner in $corners {
+    & > .port[dir="#{$corner}"] {
+      --port-cursor: resize-cursor($corner);
+    }
+  }
+}
+
+.box:hover > .border:not(:hover) > .part::after {
+  background-color: var(--HOVERCOLOR);
+}
+
+/* clip */
+$clip: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
+@each $side in $sides {
+  .box[dir*="#{$side}"]:not(:hover) {
+    & > .border[dir="#{opposite-of($side)}"] > .part::before {
+      padding-#{turn-left($side)}:  $clip;
+      padding-#{turn-right($side)}: $clip;
+    }
+    & > .border[dir="#{turn-left($side)}"] > .part::before {
+      padding-#{opposite-of($side)}: $clip;
+    }
+    & > .border[dir="#{turn-right($side)}"] > .part::before {
+      padding-#{opposite-of($side)}: $clip;
+    }
+  }
+}
+
+
+//  ######  ######## ########  ##       
+// ##    ##    ##    ##     ## ##       
+// ##          ##    ##     ## ##       
+// ##          ##    ########  ##       
+// ##          ##    ##   ##   ##       
+// ##    ##    ##    ##    ##  ##       
+//  ######     ##    ##     ## ######## 
+
+/* proxy */
+@each $corner in $corners {
+  .box[dir="#{$corner}"] > .port[dir="#{opposite-of($corner)}"] {
+    --port-shadowVisible: 0;
+    --port-dotVisible: inherit;
+    --port-cursor: inherit;
+    --port-dotColor: inherit;
+    --port-filledColor: inherit;
+  }
+  .box[dir="#{$corner}"]:hover > .port[dir="#{opposite-of($corner)}"] {
+    --port-shadowVisible: initial;
+  }
+}
+@each $side in $sides {
+  .box[dir="#{$side}"] > .border[dir="#{opposite-of($side)}"]:first-child > .port:first-child {
+    --port-shadowVisible: 0;
+    --port-dotVisible: inherit;
+    --port-cursor: inherit;
+    --port-dotColor: inherit;
+    --port-filledColor: inherit;
+  }
+  .box[dir="#{$side}"]:hover > .border[dir="#{opposite-of($side)}"]:first-child > .port:first-child {
+    --port-shadowVisible: initial;
+  }
+}
+

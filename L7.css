@@ -15,3 +15,383 @@ body {
   --FOCUSCOLOR      : DarkGray;
   --BGCOLOR         : rgba(245, 245, 245, 0.8); /* WhiteSmoke */
 }
+
+/*
+ z-index:
+   1: shadow
+   2: line
+   3: dot
+   4: content
+   5: hovered
+*/
+
+
+/*****************************
+########   #######  ##     ## 
+##     ## ##     ##  ##   ##  
+##     ## ##     ##   ## ##   
+########  ##     ##    ###    
+##     ## ##     ##   ## ##   
+##     ## ##     ##  ##   ##  
+########   #######  ##     ## 
+*****************************/
+.box {
+  position: absolute;
+  width:  var(--width);
+  height: var(--height);
+
+  pointer-events: none;
+  z-index: 4;
+}
+.box:hover {
+  z-index: 5;
+}
+.box:not([dir]) {
+  left: var(--left);
+  top:  var(--top);
+}
+.box[dir*="top"] {
+  bottom: calc(100% - var(--y));
+}
+.box[dir*="left"] {
+  right: calc(100% - var(--x));
+}
+.box[dir*="right"] {
+  left: var(--x);
+}
+.box[dir*="bottom"] {
+  top: var(--y);
+}
+
+.box > .part {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  background: var(--BGCOLOR);
+  pointer-events: auto;
+  cursor: move;
+
+  /* outline: 2px solid yellow; */
+  /* outline-offset: -1px; */
+}
+
+/**********************************************************
+########   #######  ########  ########  ######## ########  
+##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+##     ## ##     ## ##     ## ##     ## ##       ##     ## 
+########  ##     ## ########  ##     ## ######   ########  
+##     ## ##     ## ##   ##   ##     ## ##       ##   ##   
+##     ## ##     ## ##    ##  ##     ## ##       ##    ##  
+########   #######  ##     ## ########  ######## ##     ## 
+**********************************************************/
+
+.border {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  pointer-events: none;
+  z-index: auto;
+
+  --shift: calc(min(100%, 2 * var(--order, 0) * var(--HOVERRADIUS)));
+}
+.border:hover {
+  z-index: 5;
+}
+
+/* position */
+.border > .part {
+  position: absolute;
+}
+.border[dir="top"] > .part {
+  left:   0px;
+  right:  0px;
+  height: 0px;
+  top: var(--shift);
+  cursor: n-resize;
+}
+.border[dir="bottom"] > .part {
+  left:   0px;
+  right:  0px;
+  height: 0px;
+  bottom: var(--shift);
+  cursor: s-resize;
+}
+.border[dir="left"] > .part {
+  top:    0px;
+  bottom: 0px;
+  width:  0px;
+  left: var(--shift);
+  cursor: w-resize;
+}
+.border[dir="right"] > .part {
+  top:    0px;
+  bottom: 0px;
+  width:  0px;
+  right: var(--shift);
+  cursor: e-resize;
+}
+
+/* shadow, stroke, handle */
+.border > .part::before, .border > .part::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: var(---r);
+  left: var(---r);
+  right: var(---r);
+  bottom: var(---r);
+}
+.border > .part::before {
+  box-sizing: border-box;
+  ---r: calc(-1 * (var(--LINERADIUS) + var(--SHADOWRADIUS)));
+  background: content-box var(--SHADOWCOLOR);
+  pointer-events: none;
+  z-index: 1;
+}
+.border > .part::after {
+  ---r: calc(-1 * var(--LINERADIUS));
+  background: content-box var(--STROKECOLOR);
+  pointer-events: none;
+  z-index: 2;
+}
+.border > .part:hover::after {
+  background-color: var(--FOCUSCOLOR);
+}
+.box:hover > .border:not(:hover) > .part::after {
+  background-color: var(--HOVERCOLOR);
+}
+.border > .part .handle {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 2;
+
+  /* outline: 1px dashed red; */
+  /* outline-offset: -1px; */
+}
+.border[dir="top"] > .part > .handle,
+.border[dir="bottom"] > .part > .handle {
+  left:  var(--HOVERRADIUS);
+  right: var(--HOVERRADIUS);
+  top:    calc(-1 * var(--HOVERRADIUS));
+  bottom: calc(-1 * var(--HOVERRADIUS));
+}
+.border[dir="left"] > .part > .handle,
+.border[dir="right"] > .part > .handle {
+  top:    var(--HOVERRADIUS);
+  bottom: var(--HOVERRADIUS);
+  left:  calc(-1 * var(--HOVERRADIUS));
+  right: calc(-1 * var(--HOVERRADIUS));
+}
+
+/* clip */
+.border > .part::before {
+  --c: calc(2 * var(--LINERADIUS) + var(--SHADOWRADIUS));
+}
+.box[dir*="top"]:not(:hover) > .border[dir="bottom"] > .part::before,
+.box[dir*="bottom"]:not(:hover) > .border[dir="top"] > .part::before,
+.box[dir*="left"]:not(:hover) > .border[dir="bottom"] > .part::before,
+.box[dir*="left"]:not(:hover) > .border[dir="top"] > .part::before {
+  padding-left: var(--c);
+}
+.box[dir*="top"]:not(:hover) > .border[dir="bottom"] > .part::before,
+.box[dir*="bottom"]:not(:hover) > .border[dir="top"] > .part::before,
+.box[dir*="right"]:not(:hover) > .border[dir="bottom"] > .part::before,
+.box[dir*="right"]:not(:hover) > .border[dir="top"] > .part::before {
+  padding-right: var(--c);
+}
+.box[dir*="left"]:not(:hover) > .border[dir="right"] > .part::before,
+.box[dir*="right"]:not(:hover) > .border[dir="left"] > .part::before,
+.box[dir*="top"]:not(:hover) > .border[dir="right"] > .part::before,
+.box[dir*="top"]:not(:hover) > .border[dir="left"] > .part::before {
+  padding-top: var(--c);
+}
+.box[dir*="left"]:not(:hover) > .border[dir="right"] > .part::before,
+.box[dir*="right"]:not(:hover) > .border[dir="left"] > .part::before,
+.box[dir*="bottom"]:not(:hover) > .border[dir="right"] > .part::before,
+.box[dir*="bottom"]:not(:hover) > .border[dir="left"] > .part::before {
+  padding-bottom: var(--c);
+}
+
+
+/**************************************
+########   #######  ########  ######## 
+##     ## ##     ## ##     ##    ##    
+##     ## ##     ## ##     ##    ##    
+########  ##     ## ########     ##    
+##        ##     ## ##   ##      ##    
+##        ##     ## ##    ##     ##    
+##         #######  ##     ##    ##    
+**************************************/
+
+/* controlled variables */
+.border > .port {
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+}
+.box:not([dir]) > .port {
+  --port-shadowVisible: initial;
+  --port-dotVisible: initial;
+  --port-cursor: initial;
+  --port-dotColor: initial;
+  --port-filledColor: initial;
+}
+
+.port {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  pointer-events: none;
+  z-index: auto;
+}
+.port:hover {
+  z-index: 5;
+}
+
+/* position */
+.port > .part {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 0px;
+  height: 0px;
+}
+.box > .port[dir*="top"] {
+  --y: 0%;
+}
+.box > .port[dir*="left"] {
+  --x: 0%;
+}
+.box > .port[dir*="right"] {
+  --x: 100%;
+}
+.box > .port[dir*="bottom"] {
+  --y: 100%;
+}
+.border[dir="top"] > .port {
+  --x: calc(clamp(0%, var(--offset), 100%));
+  --y: var(--shift);
+}
+.border[dir="bottom"] > .port {
+  --x: calc(clamp(0%, var(--offset), 100%));
+  --y: calc(100% - var(--shift));
+}
+.border[dir="left"] > .port {
+  --x: var(--shift);
+  --y: calc(clamp(0%, var(--offset), 100%));
+}
+.border[dir="right"] > .port {
+  --x: calc(100% - var(--shift));
+  --y: calc(clamp(0%, var(--offset), 100%));
+}
+
+/* shadow, stroke, handle */
+.port > .part:hover {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+.port > .part {
+  cursor: var(--port-cursor, pointer);
+}
+.port > .part::before,
+.port > .part::after,
+.port > .part > .handle {
+  content: "";
+  display: block;
+  position: absolute;
+  top: var(---r);
+  left: var(---r);
+  right: var(---r);
+  bottom: var(---r);
+}
+.port > .part::before {
+  ---r: calc(-1 * (var(--DOTRADIUS) + var(--SHADOWRADIUS)));
+  background: content-box var(--SHADOWCOLOR);
+  pointer-events: none;
+  z-index: 1;
+
+  opacity: var(--port-shadowVisible, var(--port-dotVisible, 1));
+}
+.port > .part::after {
+  ---r: calc(-1 * var(--DOTRADIUS));
+  background: content-box var(--port-dotColor, var(--STROKECOLOR));
+  pointer-events: none;
+  z-index: 3;
+
+  outline: var(--LINERADIUS) solid var(--port-filledColor, var(--port-dotColor, var(--STROKECOLOR)));
+  outline-offset: var(---r);
+
+  opacity: var(--port-dotVisible, 1);
+}
+.port > .part .handle {
+  ---r: calc(-1 * var(--HOVERRADIUS));
+  pointer-events: auto;
+  z-index: 3;
+
+  /* outline: 1px dashed red; */
+  /* outline-offset: -1px; */
+}
+
+/* dot type */
+.port[type="hollow"] {
+  --port-filledColor: var(--SHADOWCOLOR);
+}
+.port[type="hidden"] {
+  --port-dotVisible: 0;
+}
+
+.box > .port {
+  --port-dotVisible: 0;
+}
+.box > .port:hover {
+  z-index: auto;
+}
+
+.box > .port[dir="top-left"] {
+  --port-cursor: nw-resize;
+}
+.box > .port[dir="top-right"] {
+  --port-cursor: ne-resize;
+}
+.box > .port[dir="bottom-left"] {
+  --port-cursor: sw-resize;
+}
+.box > .port[dir="bottom-right"] {
+  --port-cursor: se-resize;
+}
+
+/* proxy */
+.box[dir="bottom-right"] > .port[dir="top-left"],
+.box[dir="bottom-left"] > .port[dir="top-right"],
+.box[dir="top-right"] > .port[dir="bottom-left"],
+.box[dir="top-left"] > .port[dir="bottom-right"] {
+  --port-shadowVisible: 0;
+  --port-dotVisible: inherit;
+  --port-cursor: inherit;
+  --port-dotColor: inherit;
+  --port-filledColor: inherit;
+}
+.box[dir="bottom-right"]:hover > .port[dir="top-left"],
+.box[dir="bottom-left"]:hover > .port[dir="top-right"],
+.box[dir="top-right"]:hover > .port[dir="bottom-left"],
+.box[dir="top-left"]:hover > .port[dir="bottom-right"] {
+  --port-shadowVisible: initial;
+}
+
+.border > .port {
+  --border-lineColor: inherit;
+  --port-dotColor: var(--border-lineColor);
+}
+.border > .part:hover ~ .port {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+
+.port > .part:hover ~ * {
+  --port-dotColor: var(--FOCUSCOLOR);
+}
+
